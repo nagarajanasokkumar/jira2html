@@ -388,18 +388,39 @@ class Extractor:
         raw_attachments = fields.get("attachment") or []
         attachments = self.attachment_handler.process_attachments(raw_attachments)
 
-        # Comments — prefer renderedFields for HTML, fallback to raw body
-        raw_comments = (fields.get("comment") or {}).get("comments", [])
+        # Comments — fetch via dedicated endpoint to get ALL comments (paginated)
+        # and rendered HTML bodies. The inline JQL response only returns the first
+        # ~5 comments and does not include renderedBody reliably.
+        comment_field = fields.get("comment") or {}
+        comment_total = comment_field.get("total", 0)
+        inline_comments = comment_field.get("comments", [])
+
         comments = []
-        for c in raw_comments:
-            comments.append({
-                "id": c.get("id", ""),
-                "author": extract_user(c.get("author")),
-                "body_html": c.get("renderedBody", "") or c.get("body", ""),
-                "body_raw": c.get("body", ""),
-                "created": c.get("created", ""),
-                "updated": c.get("updated", ""),
-            })
+        if comment_total > 0:
+            try:
+                # Always use the dedicated endpoint: supports pagination + renderedBody
+                all_comments = self.client.get_issue_comments(key)
+                for c in all_comments:
+                    comments.append({
+                        "id": c.get("id", ""),
+                        "author": extract_user(c.get("author")),
+                        "body_html": c.get("renderedBody", "") or c.get("body", ""),
+                        "body_raw": c.get("body", ""),
+                        "created": c.get("created", ""),
+                        "updated": c.get("updated", ""),
+                    })
+            except Exception as e:
+                logger.warning(f"Could not fetch comments for {key} via API, using inline: {e}")
+                # Fall back to inline comments from JQL response
+                for c in inline_comments:
+                    comments.append({
+                        "id": c.get("id", ""),
+                        "author": extract_user(c.get("author")),
+                        "body_html": c.get("renderedBody", "") or c.get("body", ""),
+                        "body_raw": c.get("body", ""),
+                        "created": c.get("created", ""),
+                        "updated": c.get("updated", ""),
+                    })
 
         # Work logs
         worklogs: List[Dict[str, Any]] = []
