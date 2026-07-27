@@ -244,7 +244,7 @@ class JiraClient:
         return resp.content
 
     def get_sprints_for_board(self, board_id: int) -> List[Dict[str, Any]]:
-        """Fetch all sprints for an Agile board (requires Jira Software)."""
+        """Fetch all sprints for an Agile board (requires Jira Software Scrum board)."""
         sprints = []
         start = 0
         while True:
@@ -254,6 +254,10 @@ class JiraClient:
             )
             if resp.status_code in (404, 403):
                 logger.warning(f"Board {board_id} not accessible or not found — skipping sprints.")
+                break
+            if resp.status_code == 400:
+                # Kanban boards don't support sprints — silently skip
+                logger.debug(f"Board {board_id} does not support sprints (likely Kanban) — skipping.")
                 break
             self._check_response(resp)
             data = resp.json()
