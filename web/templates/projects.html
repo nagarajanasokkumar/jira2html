@@ -9,6 +9,38 @@
 
 <form method="POST" action="{{ url_for('save_projects') }}" id="projects-form">
 
+  <!-- ── TOP ACTION BAR ─────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+
+      <!-- Extraction mode (compact) -->
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <span style="font-size:0.82rem;font-weight:700;color:var(--text-muted);white-space:nowrap;">Extraction Mode:</span>
+        <div class="radio-group" style="gap:8px;">
+          <div class="radio-btn">
+            <input type="radio" id="mode-full-top" name="extraction_mode" value="full"
+                   checked onchange="syncMode(this);toggleFieldsSection()">
+            <label for="mode-full-top" style="padding:5px 12px;">🌐 Full</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" id="mode-selective-top" name="extraction_mode" value="selective"
+                   onchange="syncMode(this);toggleFieldsSection()">
+            <label for="mode-selective-top" style="padding:5px 12px;">🎯 Selective</label>
+          </div>
+        </div>
+        <span id="selected-count-top" style="font-size:0.82rem;color:var(--text-muted);">0 selected</span>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm">← Back</a>
+        <button type="submit" id="continue-btn-top" class="btn btn-primary" disabled>
+          Save & Configure Options →
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Project selection -->
   <div class="card">
     <div class="card-title">
@@ -260,12 +292,29 @@ function toggleSelectAll(masterCb) {
 
 function updateCount() {
   var count = document.querySelectorAll('input[name="projects"]:checked').length;
-  document.getElementById('selected-count').textContent = count + ' selected';
+  var label = count + ' selected';
+  document.getElementById('selected-count').textContent = label;
+  document.getElementById('selected-count-top').textContent = label;
   var total = document.querySelectorAll('input[name="projects"]').length;
   var master = document.getElementById('select-all');
   master.checked = count === total && total > 0;
   master.indeterminate = count > 0 && count < total;
-  document.getElementById('continue-btn').disabled = count === 0;
+  var disabled = count === 0;
+  document.getElementById('continue-btn').disabled = disabled;
+  document.getElementById('continue-btn-top').disabled = disabled;
+}
+
+// Keep top and bottom mode radios in sync
+function syncMode(src) {
+  var value = src.value;
+  var topIds = {'full': 'mode-full-top', 'selective': 'mode-selective-top'};
+  var botIds = {'full': 'mode-full', 'selective': 'mode-selective'};
+  // Sync the OTHER set of radios
+  if (src.id.endsWith('-top')) {
+    document.getElementById(botIds[value]).checked = true;
+  } else {
+    document.getElementById(topIds[value]).checked = true;
+  }
 }
 
 function toggleFieldsSection() {

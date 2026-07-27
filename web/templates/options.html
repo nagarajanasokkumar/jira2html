@@ -9,6 +9,24 @@
 
 <form method="POST" action="{{ url_for('save_options') }}">
 
+  <!-- ── TOP ACTION BAR ─────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:0.85rem;">
+        <span style="font-weight:700;color:var(--text-muted);">Projects:</span>
+        {% for key in selected_projects %}
+        <span class="stat-pill" style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:2px 10px;font-size:0.78rem;font-weight:700;">{{ key }}</span>
+        {% endfor %}
+        <span style="color:var(--text-muted);">·</span>
+        <span style="color:var(--text-muted);">Mode: <strong style="color:var(--text);">{{ extraction_mode | capitalize }}</strong></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a href="{{ url_for('projects') }}" class="btn btn-secondary btn-sm">← Back</a>
+        <button type="submit" class="btn btn-primary">🚀 Start Export →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Selected projects summary -->
   <div class="card">
     <div class="card-title">📋 Selected Projects</div>
