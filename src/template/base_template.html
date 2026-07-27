@@ -944,7 +944,7 @@ ul, ol { padding-left: 1.5em; }
 {{ issues | tojson }}
 </script>
 <script id="lunr-docs" type="application/json">
-{{ lunr_docs_json }}
+{{ lunr_docs_json | tojson }}
 </script>
 
 <!-- ═══ APPLICATION JAVASCRIPT ══════════════════════════════ -->
@@ -1158,7 +1158,17 @@ function renderIssueDetail(issue) {
       html += '<div class="comment-avatar">'+escHtml(ini)+'</div>';
       html += '<div class="comment-body">';
       html += '<div class="comment-header"><span class="comment-author">'+escHtml(author)+'</span><span class="comment-date">'+fmtDate(c.created)+'</span></div>';
-      html += '<div class="comment-content">'+(c.body_html || escHtml(c.body_raw || ''))+'</div>';
+      // body_html = Jira renderedBody (HTML); body_raw = wiki markup plain text
+      var cbody = c.body_html || '';
+      if (!cbody && c.body_raw) {
+        // Fallback: convert plain text / wiki markup to basic HTML
+        cbody = escHtml(c.body_raw)
+          .replace(/\n\n+/g, '</p><p>')
+          .replace(/\n/g, '<br>');
+        cbody = '<p>' + cbody + '</p>';
+      }
+      if (!cbody) cbody = '<em style="color:var(--text-muted)">No content</em>';
+      html += '<div class="comment-content">' + cbody + '</div>';
       html += '</div></div>';
     });
   }

@@ -129,11 +129,11 @@ def value_to_str(value: Any) -> str:
     return str(value)
 
 
-def build_lunr_index(issues: Dict[str, Dict[str, Any]]) -> str:
-    """Build a Lunr.js-compatible search index as a JSON string."""
+def build_lunr_index(issues: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Build a search index as a list of dicts (serialized via tojson in template)."""
     docs = []
     for key, issue in issues.items():
-        # Gather searchable text
+        # Strip HTML tags from rendered fields to get searchable plain text
         comments_text = " ".join(
             re.sub(r"<[^>]+>", " ", c.get("body_html", "") or "")
             for c in issue.get("comments", [])
@@ -145,7 +145,7 @@ def build_lunr_index(issues: Dict[str, Dict[str, Any]]) -> str:
             "id": key,
             "key": key,
             "summary": issue.get("summary", ""),
-            "description": description_text[:2000],  # limit for index size
+            "description": description_text[:2000],
             "issuetype": issue.get("issuetype_name", ""),
             "status": issue.get("status_name", ""),
             "priority": issue.get("priority_name", ""),
@@ -156,7 +156,7 @@ def build_lunr_index(issues: Dict[str, Dict[str, Any]]) -> str:
             "sprint": issue.get("sprint_name", ""),
             "comments": comments_text[:1000],
         })
-    return json.dumps(docs, ensure_ascii=False)
+    return docs
 
 
 class HTMLBuilder:
@@ -171,9 +171,13 @@ class HTMLBuilder:
         os.makedirs(self.output_dir, exist_ok=True)
 
         # Set up Jinja2 environment
+        # NOTE: autoescape is intentionally disabled for the knowledge base template
+        # because we embed pre-rendered HTML content (Jira descriptions, comment bodies)
+        # directly into JavaScript data blocks. Autoescape would double-encode HTML
+        # entities inside JSON strings (e.g. <p> → \u003cp\u003e → <p> in browser).
         self.env = Environment(
             loader=FileSystemLoader(TEMPLATE_DIR),
-            autoescape=select_autoescape(["html"]),
+            autoescape=False,
             trim_blocks=True,
             lstrip_blocks=True,
         )
