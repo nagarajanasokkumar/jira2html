@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Step 4: Export{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🚀 Exporting Knowledge Base</h1>
+  <p>Your Jira projects are being exported. This may take a few minutes.</p>
+</div>
+
+<!-- Summary -->
+<div class="card">
+  <div class="card-title">📋 Export Summary</div>
+  <div class="stats-row">
+    {% for key in selected_projects %}
+    <span class="stat-pill">📁 <strong>{{ key }}</strong></span>
+    {% endfor %}
+    <span class="stat-pill">Mode: <strong>{{ extraction_mode | capitalize }}</strong></span>
+    <span class="stat-pill">Output: <strong>{{ output_dir }}</strong></span>
+  </div>
+</div>
+
+<!-- Per-project progress -->
+<div id="export-project-list" class="export-project-list">
+  {% for key in selected_projects %}
+  <div class="export-project-item" id="project-item-{{ key }}">
+    <div class="export-project-header">
+      <span class="export-project-key">{{ key }}</span>
+      <span class="export-project-name" id="project-name-{{ key }}"></span>
+      <span class="export-status" id="status-{{ key }}">
+        <span class="badge badge-neutral">⏳ Waiting</span>
+      </span>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progress-{{ key }}" style="width:0%"></div>
+    </div>
+    <div class="progress-label" id="progress-label-{{ key }}">Waiting to start…</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Overall progress -->
+<div class="card" id="overall-card">
+  <div class="card-title">📊 Overall Progress</div>
+  <div class="progress-bar-track" style="height:12px;">
+    <div class="progress-bar-fill" id="overall-progress" style="width:0%;height:100%;"></div>
+  </div>
+  <div style="margin-top:8px;font-size:0.85rem;color:var(--text-muted);" id="overall-label">
+    Starting export…
+  </div>
+</div>
+
+<!-- Log console -->
+<div class="card">
+  <div class="card-title" style="justify-content:space-between;">
+    <span>📄 Export Log</span>
+    <button class="btn btn-secondary btn-sm" onclick="clearLog()">Clear</button>
+  </div>
+  <div class="log-console" id="log-console">Initializing export…
+</div>
+</div>
+
+<!-- Download results (shown on completion) -->
+<div id="download-section" style="display:none;">
+  <div class="card">
+    <div class="card-title">✅ Export Complete — Download Files</div>
+    <div class="download-grid" id="download-grid"></div>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('projects') }}" class="btn btn-secondary">← Export Another Project</a>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">🔄 Start Over</a>
+  </div>
+</div>
+
+<!-- Error section -->
+<div id="error-section" style="display:none;">
+  <div class="alert alert-danger">
+    <span class="alert-icon">❌</span>
+    <div id="error-message">Export failed. Check the log above for details.</div>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('options') }}" class="btn btn-secondary">← Back to Options</a>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var projects = {{ selected_projects | tojson }};
+var completed = 0;
+var failed = 0;
+var downloadFiles = [];
+
+function logLine(text, level) {
+  var console = document.getElementById('log-console');
+  var cls = 'log-line-' + (level || 'info');
+  var line = document.createElement('span');
+  line.className = cls;
+  line.textContent = text;
+  console.appendChild(line);
+  console.appendChild(document.createTextNode('\n'));
+  console.scrollTop = console.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-console').innerHTML = '';
+}
+
+function setProjectStatus(key, status, cssClass) {
+  var el = document.getElementById('status-' + key);
+  if (el) el.innerHTML = '<span class="badge badge-' + cssClass + '">' + status + '</span>';
+}
+
+function setProgress(key, pct, label) {
+  var bar = document.getElementById('progress-' + key);
+  var lbl = document.getElementById('progress-label-' + key);
+  if (bar) { bar.style.width = pct + '%'; }
+  if (lbl && label) { lbl.textContent = label; }
+}
+
+function updateOverall() {
+  var total = projects.length;
+  var done = completed + failed;
+  var pct = total > 0 ? Math.round(done / total * 100) : 0;
+  var bar = document.getElementById('overall-progress');
+  var lbl = document.getElementById('overall-label');
+  if (bar) bar.style.width = pct + '%';
+  if (lbl) lbl.textContent = done + ' / ' + total + ' projects complete (' + pct + '%)';
+}
+
+function startExport() {
+  logLine('[' + new Date().toLocaleTimeString() + '] Starting export of ' + projects.length + ' project(s)…', 'info');
+
+  fetch('/api/export', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ projects: projects })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(result) {
+    if (result.job_id) {
+      logLine('[' + new Date().toLocaleTimeString() + '] Export job started (id: ' + result.job_id + ')', 'info');
+      pollProgress(result.job_id);
+    } else {
+      showError(result.error || 'Failed to start export job.');
+    }
+  })
+  .catch(function(err) {
+    showError('Failed to start export: ' + err.message);
+  });
+}
+
+function pollProgress(jobId) {
+  var interval = setInterval(function() {
+    fetch('/api/export/status/' + jobId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      // Process new log lines
+      (data.new_logs || []).forEach(function(line) {
+        var level = 'info';
+        if (line.includes('✓') || line.includes('complete') || line.includes('Generated')) level = 'success';
+        else if (line.includes('✗') || line.includes('ERROR') || line.includes('Failed')) level = 'error';
+        else if (line.includes('WARNING') || line.includes('warn')) level = 'warn';
+        logLine(line, level);
+      });
+
+      // Update per-project status
+      (data.project_updates || []).forEach(function(update) {
+        var key = update.key;
+        if (update.status === 'running') {
+          setProjectStatus(key, '⏳ Exporting…', 'warning');
+          setProgress(key, update.progress || 30, update.label || 'Fetching issues…');
+          var nameEl = document.getElementById('project-name-' + key);
+          if (nameEl && update.name) nameEl.textContent = '— ' + update.name;
+        } else if (update.status === 'done') {
+          setProjectStatus(key, '✅ Done', 'success');
+          setProgress(key, 100, update.label || 'Complete');
+          document.getElementById('progress-' + key).classList.add('complete');
+          completed++;
+          if (update.file) {
+            downloadFiles.push({ key: key, name: update.name || key, file: update.file, size: update.size || '' });
+          }
+          updateOverall();
+        } else if (update.status === 'error') {
+          setProjectStatus(key, '❌ Failed', 'danger');
+          setProgress(key, 100, update.label || 'Error');
+          document.getElementById('progress-' + key).classList.add('error');
+          failed++;
+          updateOverall();
+        }
+      });
+
+      // Check if job is finished
+      if (data.finished) {
+        clearInterval(interval);
+        if (downloadFiles.length > 0) {
+          showDownloads();
+        }
+        if (failed > 0 && downloadFiles.length === 0) {
+          showError('All exports failed. Check the log for details.');
+        }
+        logLine('[' + new Date().toLocaleTimeString() + '] Export finished. ' + completed + ' succeeded, ' + failed + ' failed.', completed > 0 ? 'success' : 'error');
+      }
+    })
+    .catch(function(err) {
+      logLine('[ERROR] Polling failed: ' + err.message, 'error');
+    });
+  }, 1500);
+}
+
+function showDownloads() {
+  var section = document.getElementById('download-section');
+  var grid = document.getElementById('download-grid');
+  section.style.display = 'block';
+  grid.innerHTML = '';
+  downloadFiles.forEach(function(f) {
+    var item = document.createElement('div');
+    item.className = 'download-item';
+    item.innerHTML =
+      '<div class="download-item-icon">📄</div>' +
+      '<div class="download-item-info">' +
+        '<div class="download-item-name">' + f.key + '_knowledge_base.html</div>' +
+        '<div class="download-item-meta">' + (f.name || '') + (f.size ? ' · ' + f.size : '') + '</div>' +
+      '</div>' +
+      '<a href="/download/' + encodeURIComponent(f.file) + '" class="btn btn-success" download>' +
+        '⬇ Download' +
+      '</a>';
+    grid.appendChild(item);
+  });
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showError(msg) {
+  document.getElementById('error-section').style.display = 'block';
+  document.getElementById('error-message').textContent = msg;
+  logLine('[ERROR] ' + msg, 'error');
+}
+
+// Start export on page load
+window.addEventListener('DOMContentLoaded', function() {
+  startExport();
+});
+</script>
+{% endblock %}

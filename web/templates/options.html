@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Step 3: Export Options{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>⚙️ Export Options</h1>
+  <p>Configure attachment handling, output directory, and other export settings.</p>
+</div>
+
+<form method="POST" action="{{ url_for('save_options') }}">
+
+  <!-- Selected projects summary -->
+  <div class="card">
+    <div class="card-title">📋 Selected Projects</div>
+    <div class="stats-row">
+      {% for key in selected_projects %}
+      <span class="stat-pill">📁 <strong>{{ key }}</strong></span>
+      {% endfor %}
+    </div>
+    <div style="font-size:0.82rem;color:var(--text-muted);">
+      Extraction mode: <strong>{{ extraction_mode | capitalize }}</strong>
+      &nbsp;·&nbsp;
+      <a href="{{ url_for('projects') }}">Change selection</a>
+    </div>
+  </div>
+
+  <!-- Attachment options -->
+  <div class="card">
+    <div class="card-title">📎 Attachments</div>
+
+    <div class="form-group">
+      <div class="form-check">
+        <input type="checkbox" id="embed_attachments" name="embed_attachments"
+               {% if options.get('embed_attachments', True) %}checked{% endif %}
+               onchange="toggleAttachmentOptions(this)">
+        <label for="embed_attachments">
+          <strong>Embed attachments in HTML</strong>
+          <span style="font-size:0.8rem;color:var(--text-muted);display:block;margin-top:2px;">
+            Images are shown inline; other files (PDF, DOCX) become download links
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div id="attachment-options">
+      <div class="form-group">
+        <label for="max_attachment_size">Maximum attachment size to embed (MB)</label>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <input type="range" id="size-slider" min="1" max="50" step="1"
+                 value="{{ options.get('max_attachment_size_mb', 10) }}"
+                 oninput="document.getElementById('max_attachment_size').value=this.value"
+                 style="flex:1;">
+          <input type="number" id="max_attachment_size" name="max_attachment_size_mb"
+                 class="form-control" style="width:80px;"
+                 min="1" max="100"
+                 value="{{ options.get('max_attachment_size_mb', 10) }}"
+                 oninput="document.getElementById('size-slider').value=this.value">
+          <span style="font-size:0.85rem;color:var(--text-muted);">MB</span>
+        </div>
+        <div class="hint">Files larger than this will be skipped (listed but not embedded). Increase for more complete exports.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Attachment concurrency</label>
+        <select name="attachment_workers" class="form-control" style="width:200px;">
+          {% for n in [1, 2, 3, 5] %}
+          <option value="{{ n }}" {% if options.get('attachment_workers', 3) == n %}selected{% endif %}>
+            {{ n }} worker{{ 's' if n > 1 else '' }}
+            {% if n == 1 %} (sequential, safest){% elif n == 3 %} (recommended){% elif n == 5 %} (fastest){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="hint">More workers = faster attachment downloads, but may trigger Jira rate limiting.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional data -->
+  <div class="card">
+    <div class="card-title">📊 Additional Data</div>
+
+    <div class="form-group">
+      <div class="form-check">
+        <input type="checkbox" id="include_worklogs" name="include_worklogs"
+               {% if options.get('include_worklogs', True) %}checked{% endif %}>
+        <label for="include_worklogs">Include work log entries (time tracking)</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="form-check">
+        <input type="checkbox" id="include_watchers" name="include_watchers"
+               {% if options.get('include_watchers', False) %}checked{% endif %}>
+        <label for="include_watchers">Include issue watchers
+          <span style="font-size:0.78rem;color:var(--text-muted);">(adds extra API calls per issue)</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance -->
+  <div class="card">
+    <div class="card-title">⚡ Performance</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="page_size">API page size (issues per request)</label>
+        <select name="page_size" id="page_size" class="form-control">
+          {% for ps in [25, 50, 100] %}
+          <option value="{{ ps }}" {% if options.get('page_size', 100) == ps %}selected{% endif %}>
+            {{ ps }} issues/request {% if ps == 100 %}(max, fastest){% elif ps == 25 %}(slowest, safest){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="hint">Reduce to 25–50 if you encounter Jira timeout errors.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="output_dir">Output directory</label>
+        <input type="text" id="output_dir" name="output_dir" class="form-control"
+               value="{{ options.get('output_dir', './output') }}"
+               placeholder="./output">
+        <div class="hint">Where to save the generated HTML files. Relative or absolute path.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estimated size warning -->
+  <div class="alert alert-info">
+    <span class="alert-icon">💡</span>
+    <div>
+      <strong>File size estimate:</strong>
+      ~1–3 MB per 100 issues without attachments, ~5–20 MB with images.
+      Large files may take a few seconds to open in the browser.
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <a href="{{ url_for('projects') }}" class="btn btn-secondary">← Back</a>
+    <button type="submit" class="btn btn-primary btn-lg">
+      🚀 Start Export →
+    </button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleAttachmentOptions(cb) {
+  document.getElementById('attachment-options').style.opacity = cb.checked ? '1' : '0.4';
+  document.getElementById('attachment-options').style.pointerEvents = cb.checked ? '' : 'none';
+}
+// Init
+toggleAttachmentOptions(document.getElementById('embed_attachments'));
+</script>
+{% endblock %}

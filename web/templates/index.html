@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Step 1: Connect{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🔌 Connect to Jira</h1>
+  <p>Enter your Jira Server/Data Center URL and credentials to get started.</p>
+</div>
+
+<form id="connect-form" method="POST" action="{{ url_for('connect') }}">
+
+  <!-- Jira URL -->
+  <div class="card">
+    <div class="card-title">🌐 Jira Instance</div>
+
+    <div class="form-group">
+      <label for="base_url">Jira Base URL</label>
+      <input type="url" id="base_url" name="base_url" class="form-control"
+             placeholder="https://jira.yourcompany.com"
+             value="{{ config.jira.base_url if config.jira.base_url != 'https://your-jira.company.com' else '' }}"
+             required>
+      <div class="hint">No trailing slash. Must be reachable from this machine.</div>
+    </div>
+
+    <div class="form-group">
+      <div class="form-check">
+        <input type="checkbox" id="verify_ssl" name="verify_ssl"
+               {% if config.jira.get('verify_ssl', True) %}checked{% endif %}>
+        <label for="verify_ssl">Verify SSL certificate (uncheck for self-signed certificates)</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authentication -->
+  <div class="card">
+    <div class="card-title">🔑 Authentication</div>
+
+    <div class="form-group">
+      <label>Authentication Method</label>
+      <div class="radio-group">
+        <div class="radio-btn">
+          <input type="radio" id="auth_token" name="auth_method" value="token"
+                 {% if config.jira.auth_method != 'basic' %}checked{% endif %}>
+          <label for="auth_token">🔐 Personal Access Token (recommended)</label>
+        </div>
+        <div class="radio-btn">
+          <input type="radio" id="auth_basic" name="auth_method" value="basic"
+                 {% if config.jira.auth_method == 'basic' %}checked{% endif %}>
+          <label for="auth_basic">🔒 Basic (username + password)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" class="form-control"
+               placeholder="john.doe"
+               value="{{ config.jira.username if config.jira.username != 'your-username' else '' }}"
+               required>
+        <div class="hint">Your Jira login name (not display name)</div>
+      </div>
+
+      <div class="form-group" id="token-group">
+        <label for="token">Personal Access Token</label>
+        <input type="password" id="token" name="token" class="form-control"
+               placeholder="Paste your PAT here"
+               value="{{ config.jira.token if config.jira.token != 'your-personal-access-token' else '' }}">
+        <div class="hint">
+          Generate in Jira: Profile → Personal Access Tokens → Create token
+          <br><a href="#" id="pat-help-link" style="font-size:0.78rem;">How to create a PAT?</a>
+        </div>
+      </div>
+
+      <div class="form-group" id="password-group" style="display:none;">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control"
+               placeholder="Your Jira password">
+      </div>
+    </div>
+
+    <!-- PAT help tooltip -->
+    <div id="pat-help" class="alert alert-info" style="display:none; margin-top:0;">
+      <span class="alert-icon">ℹ️</span>
+      <div>
+        <strong>To generate a Personal Access Token:</strong><br>
+        1. Log in to your Jira instance<br>
+        2. Click your avatar (top-right) → <strong>Profile</strong><br>
+        3. In the left panel, click <strong>Personal Access Tokens</strong><br>
+        4. Click <strong>Create token</strong>, give it a name, set expiry<br>
+        5. Copy the token and paste it above<br><br>
+        <em>Note: PAT is available in Jira Server 8.14+ and Data Center 8.14+</em>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test & Connect -->
+  <div class="btn-group">
+    <button type="button" id="test-btn" class="btn btn-secondary">
+      🔍 Test Connection
+    </button>
+    <button type="submit" id="connect-btn" class="btn btn-primary btn-lg">
+      Connect & Continue →
+    </button>
+    <span class="config-saved" id="config-saved-indicator">✓ Settings saved</span>
+  </div>
+
+</form>
+
+<!-- Connection test result (shown after clicking Test) -->
+<div id="connection-status">
+  <div class="status-card" id="status-card">
+    <div class="status-icon" id="status-icon">✅</div>
+    <div class="status-details">
+      <div class="status-name" id="status-name"></div>
+      <div class="status-email" id="status-email"></div>
+    </div>
+    <div id="status-proceed"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle PAT / password fields based on auth method
+function updateAuthFields() {
+  var method = document.querySelector('input[name="auth_method"]:checked').value;
+  document.getElementById('token-group').style.display = method === 'token' ? '' : 'none';
+  document.getElementById('password-group').style.display = method === 'basic' ? '' : 'none';
+  document.getElementById('token').required = method === 'token';
+}
+document.querySelectorAll('input[name="auth_method"]').forEach(function(r) {
+  r.addEventListener('change', updateAuthFields);
+});
+updateAuthFields();
+
+// PAT help toggle
+document.getElementById('pat-help-link').addEventListener('click', function(e) {
+  e.preventDefault();
+  var help = document.getElementById('pat-help');
+  help.style.display = help.style.display === 'none' ? 'flex' : 'none';
+});
+
+// Test connection
+document.getElementById('test-btn').addEventListener('click', function() {
+  var btn = this;
+  var statusDiv = document.getElementById('connection-status');
+  var statusCard = document.getElementById('status-card');
+  var statusIcon = document.getElementById('status-icon');
+  var statusName = document.getElementById('status-name');
+  var statusEmail = document.getElementById('status-email');
+  var statusProceed = document.getElementById('status-proceed');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Testing…';
+
+  var data = {
+    base_url: document.getElementById('base_url').value,
+    auth_method: document.querySelector('input[name="auth_method"]:checked').value,
+    username: document.getElementById('username').value,
+    token: document.getElementById('token').value,
+    password: document.getElementById('password').value,
+    verify_ssl: document.getElementById('verify_ssl').checked
+  };
+
+  fetch('/api/test-connection', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(result) {
+    statusDiv.style.display = 'block';
+    if (result.success) {
+      statusCard.className = 'status-card';
+      statusIcon.textContent = '✅';
+      statusName.textContent = '✓ Connected as: ' + result.display_name;
+      statusEmail.textContent = result.email || '';
+      statusProceed.innerHTML = '<a href="/projects" class="btn btn-success btn-sm">Continue to Projects →</a>';
+    } else {
+      statusCard.className = 'status-card error';
+      statusIcon.textContent = '❌';
+      statusName.textContent = 'Connection failed';
+      statusEmail.textContent = result.error || 'Unknown error';
+      statusProceed.innerHTML = '';
+    }
+  })
+  .catch(function(err) {
+    statusDiv.style.display = 'block';
+    statusCard.className = 'status-card error';
+    statusIcon.textContent = '❌';
+    statusName.textContent = 'Request failed';
+    statusEmail.textContent = err.message;
+    statusProceed.innerHTML = '';
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 Test Connection';
+  });
+});
+</script>
+{% endblock %}

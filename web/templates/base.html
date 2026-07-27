@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Jira2HTML{% endblock %} — Knowledge Base Exporter</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="logo">
+    <span>📚</span>
+    <span>Jira2HTML</span>
+  </div>
+  <span class="tagline">Knowledge Base Exporter</span>
+  <div class="header-spacer"></div>
+  <span class="header-version">v1.0</span>
+</header>
+
+<!-- ═══ LAYOUT ═══════════════════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- ─── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="app-sidebar">
+    <div class="sidebar-label">Steps</div>
+    <ul class="sidebar-steps">
+      <li>
+        <a href="{{ url_for('index') }}"
+           class="{% if active_step == 1 %}active{% elif active_step > 1 %}completed{% endif %}">
+          <span class="step-num">1</span>
+          Connect to Jira
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('projects') if active_step >= 2 else '#' }}"
+           class="{% if active_step == 2 %}active{% elif active_step > 2 %}completed{% endif %}
+                  {% if active_step < 2 %}disabled{% endif %}">
+          <span class="step-num">2</span>
+          Select Projects
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('options') if active_step >= 3 else '#' }}"
+           class="{% if active_step == 3 %}active{% elif active_step > 3 %}completed{% endif %}
+                  {% if active_step < 3 %}disabled{% endif %}">
+          <span class="step-num">3</span>
+          Export Options
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('export') if active_step >= 4 else '#' }}"
+           class="{% if active_step == 4 %}active{% endif %}
+                  {% if active_step < 4 %}disabled{% endif %}">
+          <span class="step-num">4</span>
+          Export & Download
+        </a>
+      </li>
+    </ul>
+
+    <hr class="divider" style="margin: 20px 0;">
+
+    <div style="padding: 0 20px;">
+      {% if session.get('connected') %}
+      <div style="font-size:0.78rem; color: var(--success);">
+        ✅ Connected<br>
+        <span style="color:var(--text-muted);">{{ session.get('jira_url', '') | truncate(28) }}</span>
+      </div>
+      {% else %}
+      <div style="font-size:0.78rem; color: var(--text-muted);">Not connected</div>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- ─── MAIN CONTENT ─────────────────────────────────────── -->
+  <main class="app-main">
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+      <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }}">
+        <span class="alert-icon">
+          {% if category == 'success' %}✅{% elif category == 'danger' %}❌{% elif category == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+        </span>
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+</div><!-- end app-layout -->
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

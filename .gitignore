@@ -48,3 +48,6 @@ htmlcov/
 
 # Graphify
 .graphify/
+
+# graphify-axet
+.graphify/
