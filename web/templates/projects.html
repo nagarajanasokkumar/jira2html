@@ -7,43 +7,46 @@
   <p>Choose which Jira projects to export and configure the extraction mode.</p>
 </div>
 
-<form method="POST" action="{{ url_for('save_projects') }}">
+<form method="POST" action="{{ url_for('save_projects') }}" id="projects-form">
 
   <!-- Project selection -->
   <div class="card">
-    <div class="card-title">📁 Available Projects <span class="badge badge-info" style="margin-left:8px;">{{ projects | length }} total</span></div>
-
-    <div class="select-all-bar">
-      <div class="form-check">
-        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
-        <label for="select-all"><strong>Select All</strong></label>
-      </div>
-      <span class="project-count" id="selected-count">0 selected</span>
+    <div class="card-title">
+      📁 Available Projects
+      <span class="badge badge-info" id="project-count-badge" style="margin-left:8px;display:none;"></span>
     </div>
 
-    {% if projects %}
-    <div class="project-grid">
-      {% for project in projects %}
-      <div class="project-card {% if project.key in selected_projects %}selected{% endif %}"
-           onclick="toggleProject(this)">
-        <input type="checkbox" name="projects" value="{{ project.key }}"
-               id="proj-{{ project.key }}"
-               {% if project.key in selected_projects %}checked{% endif %}
-               onchange="updateCount()">
-        <div class="project-card-body">
-          <div class="project-key">{{ project.key }}</div>
-          <div class="project-name">{{ project.name }}</div>
-          <div class="project-type">{{ project.get('projectTypeKey', 'software') | capitalize }}</div>
+    <!-- Loading state -->
+    <div id="projects-loading" style="padding:24px;text-align:center;">
+      <span class="spinner spinner-dark" style="width:28px;height:28px;margin-bottom:12px;display:inline-block;"></span>
+      <div style="font-size:0.9rem;color:var(--text-muted);margin-top:8px;">Loading projects from Jira…</div>
+    </div>
+
+    <!-- Error state -->
+    <div id="projects-error" style="display:none;">
+      <div class="alert alert-danger">
+        <span class="alert-icon">❌</span>
+        <div>
+          <strong>Could not load projects.</strong>
+          <div id="projects-error-msg" style="margin-top:4px;font-size:0.85rem;"></div>
+          <button type="button" class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="loadProjects()">
+            🔄 Retry
+          </button>
         </div>
       </div>
-      {% endfor %}
     </div>
-    {% else %}
-    <div class="alert alert-warning">
-      <span class="alert-icon">⚠️</span>
-      No projects found. Check that your account has Browse Projects permission.
+
+    <!-- Projects grid (populated by JS) -->
+    <div id="projects-loaded" style="display:none;">
+      <div class="select-all-bar">
+        <div class="form-check">
+          <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+          <label for="select-all"><strong>Select All</strong></label>
+        </div>
+        <span class="project-count" id="selected-count">0 selected</span>
+      </div>
+      <div class="project-grid" id="project-grid"></div>
     </div>
-    {% endif %}
   </div>
 
   <!-- Extraction mode -->
@@ -55,87 +58,76 @@
       <div class="radio-group">
         <div class="radio-btn">
           <input type="radio" id="mode-full" name="extraction_mode" value="full"
-                 {% if extraction_mode != 'selective' %}checked{% endif %}
-                 onchange="toggleFieldsSection()">
+                 checked onchange="toggleFieldsSection()">
           <label for="mode-full">🌐 Full Extract <span style="font-weight:400;color:var(--text-muted);">— all fields, comments, attachments, sprints (recommended)</span></label>
         </div>
         <div class="radio-btn">
           <input type="radio" id="mode-selective" name="extraction_mode" value="selective"
-                 {% if extraction_mode == 'selective' %}checked{% endif %}
                  onchange="toggleFieldsSection()">
           <label for="mode-selective">🎯 Selective <span style="font-weight:400;color:var(--text-muted);">— choose exactly which fields to include</span></label>
         </div>
       </div>
     </div>
 
-    <!-- Selective field picker -->
-    <div id="fields-section" class="fields-section" style="display:none;">
+    <!-- Selective field picker (hidden until mode-selective chosen) -->
+    <div id="fields-section" style="display:none;">
       <hr class="divider">
 
-      <div class="alert alert-info">
-        <span class="alert-icon">ℹ️</span>
-        <div>Check the fields you want to include. Hierarchy fields (parent, subtasks, issuelinks) are always included.</div>
+      <!-- Loading fields -->
+      <div id="fields-loading" style="padding:16px;text-align:center;display:none;">
+        <span class="spinner spinner-dark" style="width:20px;height:20px;display:inline-block;"></span>
+        <span style="font-size:0.88rem;color:var(--text-muted);margin-left:8px;">Loading fields from Jira…</span>
       </div>
 
-      <div class="fields-search">
-        <input type="text" class="form-control" placeholder="🔍 Filter fields…" id="field-filter"
-               oninput="filterFields(this.value)">
+      <!-- Fields error -->
+      <div id="fields-error" style="display:none;">
+        <div class="alert alert-danger">
+          <span class="alert-icon">❌</span>
+          <div>
+            <strong>Could not load fields.</strong>
+            <div id="fields-error-msg" style="margin-top:4px;font-size:0.85rem;"></div>
+            <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px;" onclick="loadFields()">🔄 Retry</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Standard fields -->
-      <h3>Standard Fields</h3>
-      <table class="fields-table" id="standard-fields-table">
-        <thead>
-          <tr>
-            <th style="width:36px;"><input type="checkbox" id="sel-all-std" onchange="toggleFieldGroup('standard', this.checked)"></th>
-            <th>Field Name</th>
-            <th>Field ID</th>
-            <th>Type</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for field in standard_fields %}
-          <tr class="field-row">
-            <td><input type="checkbox" name="std_fields" value="{{ field.id }}"
-                       {% if field.id in selected_std_fields %}checked{% endif %}></td>
-            <td>{{ field.name }}</td>
-            <td class="field-id">{{ field.id }}</td>
-            <td class="field-type"><span class="badge badge-neutral">{{ field.schema.type if field.schema else '—' }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      {% if custom_fields %}
-      <h3 style="margin-top:20px;">Custom Fields</h3>
-      <table class="fields-table" id="custom-fields-table">
-        <thead>
-          <tr>
-            <th style="width:36px;"><input type="checkbox" id="sel-all-cst" onchange="toggleFieldGroup('custom', this.checked)"></th>
-            <th>Field Name</th>
-            <th>Field ID</th>
-            <th>Type</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for field in custom_fields %}
-          <tr class="field-row">
-            <td><input type="checkbox" name="custom_fields" value="{{ field.id }}"
-                       {% if field.id in selected_custom_fields %}checked{% endif %}></td>
-            <td>{{ field.name }}</td>
-            <td class="field-id">{{ field.id }}</td>
-            <td class="field-type"><span class="badge badge-neutral">{{ field.schema.type if field.schema else '—' }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% endif %}
+      <!-- Fields content -->
+      <div id="fields-content" style="display:none;">
+        <div class="alert alert-info" style="margin-bottom:14px;">
+          <span class="alert-icon">ℹ️</span>
+          <div>Check the fields you want to include. Hierarchy fields (parent, subtasks, issuelinks) are always included.</div>
+        </div>
+        <div class="fields-search">
+          <input type="text" class="form-control" placeholder="🔍 Filter fields…" id="field-filter"
+                 oninput="filterFields(this.value)">
+        </div>
+        <h3 style="font-size:0.88rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Standard Fields</h3>
+        <table class="fields-table">
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="sel-all-std" onchange="toggleFieldGroup('std_fields', this.checked)"></th>
+              <th>Field Name</th><th>Field ID</th><th>Type</th>
+            </tr>
+          </thead>
+          <tbody id="standard-fields-body"></tbody>
+        </table>
+        <h3 style="font-size:0.88rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin:18px 0 10px;">Custom Fields</h3>
+        <table class="fields-table">
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="sel-all-cst" onchange="toggleFieldGroup('custom_fields', this.checked)"></th>
+              <th>Field Name</th><th>Field ID</th><th>Type</th>
+            </tr>
+          </thead>
+          <tbody id="custom-fields-body"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <div class="btn-group">
     <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back</a>
-    <button type="submit" class="btn btn-primary btn-lg">
+    <button type="submit" id="continue-btn" class="btn btn-primary btn-lg" disabled>
       Save & Configure Options →
     </button>
   </div>
@@ -145,6 +137,112 @@
 
 {% block scripts %}
 <script>
+var selectedProjects = {{ (session.get('selected_projects') or []) | tojson }};
+var fieldsLoaded = false;
+
+// ── Load projects via AJAX ────────────────────────────────────
+function loadProjects() {
+  document.getElementById('projects-loading').style.display = 'block';
+  document.getElementById('projects-error').style.display = 'none';
+  document.getElementById('projects-loaded').style.display = 'none';
+
+  fetch('/api/projects')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('projects-loading').style.display = 'none';
+      if (!data.success) {
+        document.getElementById('projects-error').style.display = 'block';
+        document.getElementById('projects-error-msg').textContent = data.error || 'Unknown error';
+        return;
+      }
+      renderProjects(data.projects);
+      var badge = document.getElementById('project-count-badge');
+      badge.textContent = data.count + ' total';
+      badge.style.display = '';
+      document.getElementById('projects-loaded').style.display = 'block';
+      updateCount();
+    })
+    .catch(function(err) {
+      document.getElementById('projects-loading').style.display = 'none';
+      document.getElementById('projects-error').style.display = 'block';
+      document.getElementById('projects-error-msg').textContent = err.message;
+    });
+}
+
+function renderProjects(projects) {
+  var grid = document.getElementById('project-grid');
+  grid.innerHTML = '';
+  if (!projects || projects.length === 0) {
+    grid.innerHTML = '<div class="alert alert-warning"><span class="alert-icon">⚠️</span>No projects found. Check that your account has Browse Projects permission.</div>';
+    return;
+  }
+  projects.forEach(function(p) {
+    var isSelected = selectedProjects.indexOf(p.key) !== -1;
+    var card = document.createElement('div');
+    card.className = 'project-card' + (isSelected ? ' selected' : '');
+    card.onclick = function() { toggleProject(this); };
+    card.innerHTML =
+      '<input type="checkbox" name="projects" value="' + esc(p.key) + '"' +
+      ' id="proj-' + esc(p.key) + '"' + (isSelected ? ' checked' : '') +
+      ' onchange="updateCount()">' +
+      '<div class="project-card-body">' +
+        '<div class="project-key">' + esc(p.key) + '</div>' +
+        '<div class="project-name">' + esc(p.name) + '</div>' +
+        '<div class="project-type">' + esc((p.projectTypeKey || 'software')) + '</div>' +
+      '</div>';
+    grid.appendChild(card);
+  });
+}
+
+// ── Load fields via AJAX (only when Selective chosen) ─────────
+function loadFields() {
+  document.getElementById('fields-loading').style.display = 'block';
+  document.getElementById('fields-error').style.display = 'none';
+  document.getElementById('fields-content').style.display = 'none';
+
+  fetch('/api/fields')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('fields-loading').style.display = 'none';
+      if (!data.success) {
+        document.getElementById('fields-error').style.display = 'block';
+        document.getElementById('fields-error-msg').textContent = data.error || 'Unknown error';
+        return;
+      }
+      renderFields('standard-fields-body', data.standard_fields, 'std_fields');
+      renderFields('custom-fields-body', data.custom_fields, 'custom_fields');
+      document.getElementById('fields-content').style.display = 'block';
+      fieldsLoaded = true;
+    })
+    .catch(function(err) {
+      document.getElementById('fields-loading').style.display = 'none';
+      document.getElementById('fields-error').style.display = 'block';
+      document.getElementById('fields-error-msg').textContent = err.message;
+    });
+}
+
+function renderFields(tbodyId, fields, inputName) {
+  var tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '';
+  (fields || []).forEach(function(f) {
+    var tr = document.createElement('tr');
+    tr.className = 'field-row';
+    var schemaType = (f.schema && f.schema.type) ? f.schema.type : '—';
+    tr.innerHTML =
+      '<td><input type="checkbox" name="' + inputName + '" value="' + esc(f.id) + '"></td>' +
+      '<td>' + esc(f.name) + '</td>' +
+      '<td class="field-id">' + esc(f.id) + '</td>' +
+      '<td class="field-type"><span class="badge badge-neutral">' + esc(schemaType) + '</span></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"');
+}
+
 function toggleProject(card) {
   var cb = card.querySelector('input[type="checkbox"]');
   cb.checked = !cb.checked;
@@ -164,17 +262,22 @@ function updateCount() {
   var count = document.querySelectorAll('input[name="projects"]:checked').length;
   document.getElementById('selected-count').textContent = count + ' selected';
   var total = document.querySelectorAll('input[name="projects"]').length;
-  document.getElementById('select-all').checked = count === total && total > 0;
-  document.getElementById('select-all').indeterminate = count > 0 && count < total;
+  var master = document.getElementById('select-all');
+  master.checked = count === total && total > 0;
+  master.indeterminate = count > 0 && count < total;
+  document.getElementById('continue-btn').disabled = count === 0;
 }
 
 function toggleFieldsSection() {
   var mode = document.querySelector('input[name="extraction_mode"]:checked').value;
-  document.getElementById('fields-section').style.display = mode === 'selective' ? 'block' : 'none';
+  var section = document.getElementById('fields-section');
+  section.style.display = mode === 'selective' ? 'block' : 'none';
+  if (mode === 'selective' && !fieldsLoaded) {
+    loadFields();
+  }
 }
 
-function toggleFieldGroup(type, checked) {
-  var name = type === 'standard' ? 'std_fields' : 'custom_fields';
+function toggleFieldGroup(name, checked) {
   document.querySelectorAll('input[name="' + name + '"]').forEach(function(cb) {
     cb.checked = checked;
   });
@@ -183,13 +286,22 @@ function toggleFieldGroup(type, checked) {
 function filterFields(query) {
   var q = query.toLowerCase();
   document.querySelectorAll('.field-row').forEach(function(row) {
-    var text = row.textContent.toLowerCase();
-    row.style.display = text.includes(q) ? '' : 'none';
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
 }
 
-// Init
-updateCount();
-toggleFieldsSection();
+// Validate before submit
+document.getElementById('projects-form').addEventListener('submit', function(e) {
+  var selected = document.querySelectorAll('input[name="projects"]:checked').length;
+  if (selected === 0) {
+    e.preventDefault();
+    alert('Please select at least one project.');
+  }
+});
+
+// Load projects on page ready
+document.addEventListener('DOMContentLoaded', function() {
+  loadProjects();
+});
 </script>
 {% endblock %}

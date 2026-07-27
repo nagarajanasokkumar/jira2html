@@ -171,51 +171,12 @@ def connect():
 
 @app.route("/projects")
 def projects():
-    """Step 2 — Project and field selection."""
+    """Step 2 — Project and field selection (projects loaded via AJAX)."""
     if not session.get("connected"):
         flash("Please connect to Jira first.", "warning")
         return redirect(url_for("index"))
-
-    config = load_config()
-    project_list = []
-    standard_fields = []
-    custom_fields = []
-
-    try:
-        client = build_jira_client(config)
-        project_list = client.get_projects()
-
-        # Fetch fields for selective mode
-        all_fields = client.get_all_fields()
-        standard_fields = sorted(
-            [f for f in all_fields if not f.get("custom", False)],
-            key=lambda x: x.get("name", "")
-        )
-        custom_fields = sorted(
-            [f for f in all_fields if f.get("custom", False)],
-            key=lambda x: x.get("name", "")
-        )
-    except Exception as e:
-        flash(f"Could not fetch projects: {str(e)}", "danger")
-
-    selected = session.get("selected_projects", [])
-    extraction_mode = session.get("extraction_mode", config["extraction"]["mode"])
-    sel_std = session.get("selected_std_fields",
-                          config["extraction"]["fields"].get("standard", []))
-    sel_custom = session.get("selected_custom_fields",
-                             config["extraction"]["fields"].get("custom", []))
-
-    return render_template(
-        "projects.html",
-        active_step=2,
-        projects=project_list,
-        selected_projects=selected,
-        extraction_mode=extraction_mode,
-        standard_fields=standard_fields,
-        custom_fields=custom_fields,
-        selected_std_fields=sel_std,
-        selected_custom_fields=sel_custom,
-    )
+    # Projects and fields are loaded client-side via /api/projects and /api/fields
+    return render_template("projects.html", active_step=2)
 
 
 @app.route("/save-projects", methods=["POST"])
@@ -271,8 +232,8 @@ def save_options():
     config = load_config()
 
     config["options"]["embed_attachments"] = "embed_attachments" in request.form
-    config["options"]["max_attachment_size_mb"] = int(request.form.get("max_attachment_size_mb", 10))
-    config["options"]["attachment_workers"] = int(request.form.get("attachment_workers", 3))
+    config["options"]["max_attachment_size_mb"] = int(request.form.get("max_attachment_size_mb") or 10)
+    config["options"]["attachment_workers"] = int(request.form.get("attachment_workers") or 3)
     config["options"]["include_worklogs"] = "include_worklogs" in request.form
     config["options"]["include_watchers"] = "include_watchers" in request.form
     config["options"]["page_size"] = int(request.form.get("page_size", 100))
@@ -305,6 +266,57 @@ def export():
 
 
 # ── API Endpoints ─────────────────────────────────────────────
+
+@app.route("/api/projects")
+def api_get_projects():
+    """Fetch project list from Jira. Called via AJAX from projects page."""
+    if not session.get("connected"):
+        return jsonify({"error": "Not connected"}), 401
+    config = load_config()
+    try:
+        client = build_jira_client(config)
+        projects = client.get_projects()
+        # Normalize to safe minimal structure
+        result = []
+        for p in projects:
+            result.append({
+                "key": p.get("key", ""),
+                "name": p.get("name", ""),
+                "projectTypeKey": p.get("projectTypeKey", "software"),
+                "description": (p.get("description") or "")[:120],
+            })
+        return jsonify({"success": True, "projects": result, "count": len(result)})
+    except Exception as e:
+        logger.exception("Failed to fetch projects")
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/fields")
+def api_get_fields():
+    """Fetch all Jira fields. Called via AJAX only when Selective mode is chosen."""
+    if not session.get("connected"):
+        return jsonify({"error": "Not connected"}), 401
+    config = load_config()
+    try:
+        client = build_jira_client(config)
+        all_fields = client.get_all_fields()
+        standard = sorted(
+            [{"id": f.get("id",""), "name": f.get("name",""),
+              "schema": f.get("schema",{}), "custom": False}
+             for f in all_fields if not f.get("custom", False)],
+            key=lambda x: x["name"]
+        )
+        custom = sorted(
+            [{"id": f.get("id",""), "name": f.get("name",""),
+              "schema": f.get("schema",{}), "custom": True}
+             for f in all_fields if f.get("custom", False)],
+            key=lambda x: x["name"]
+        )
+        return jsonify({"success": True, "standard_fields": standard, "custom_fields": custom})
+    except Exception as e:
+        logger.exception("Failed to fetch fields")
+        return jsonify({"success": False, "error": str(e)})
+
 
 @app.route("/api/test-connection", methods=["POST"])
 def api_test_connection():
