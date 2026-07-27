@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Output directory (generated HTML files — can be large)
+output/
+
+# Sensitive config — never commit credentials
+# Keep config.yaml in repo as a template (credentials are placeholders)
+# but ignore any personal overrides:
+config_local.yaml
+config_prod.yaml
+config_staging.yaml
+*.secret.yaml
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Graphify
+.graphify/

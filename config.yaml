@@ -1,0 +1,101 @@
+# ============================================================
+# Jira to HTML Knowledge Base — Configuration File
+# ============================================================
+
+jira:
+  # Base URL of your Jira Server/Data Center instance (no trailing slash)
+  base_url: "https://your-jira.company.com"
+
+  # Authentication method: "token" (Personal Access Token) or "basic" (username+password)
+  auth_method: "token"
+
+  # Your Jira username (required for both auth methods)
+  username: "your-username"
+
+  # Personal Access Token (used when auth_method is "token")
+  # Generate via: Jira → Profile → Personal Access Tokens → Create token
+  token: "your-personal-access-token"
+
+  # Password (used only when auth_method is "basic")
+  password: ""
+
+  # SSL verification. Set to false if your Jira uses a self-signed certificate.
+  # WARNING: disabling SSL verification is a security risk. Use only in trusted networks.
+  verify_ssl: true
+
+  # List of Jira project keys to export. Leave empty [] to export ALL accessible projects.
+  # Example: ["PROJ1", "PROJ2", "MYAPP"]
+  projects: []
+
+
+options:
+  # Whether to download and embed attachments (images as Base64, other files as download links)
+  embed_attachments: true
+
+  # Maximum attachment file size to embed (in MB). Files larger than this are skipped.
+  max_attachment_size_mb: 10
+
+  # Directory where generated HTML files will be saved
+  output_dir: "./output"
+
+  # Maximum number of issues to fetch per API request (Jira max is 100)
+  page_size: 100
+
+  # Number of concurrent API requests for attachment downloads (1 = sequential, safer)
+  attachment_workers: 3
+
+  # Include issue watchers in the output
+  include_watchers: false
+
+  # Include work log entries in the output
+  include_worklogs: true
+
+
+extraction:
+  # Extraction mode:
+  #   "full"      → Extract ALL available fields (recommended for first-time migration)
+  #   "selective" → Extract only fields listed below under 'fields'
+  mode: "full"
+
+  # ─────────────────────────────────────────────────────────────
+  # SELECTIVE MODE FIELD CONFIGURATION
+  # Only applies when mode is "selective"
+  # Run: python jira2html.py --list-fields --project YOURPROJECT
+  # to see all field IDs available for your Jira instance.
+  # ─────────────────────────────────────────────────────────────
+  fields:
+    # Standard Jira fields — use the exact field names below
+    standard:
+      - summary
+      - description
+      - status
+      - issuetype
+      - priority
+      - assignee
+      - reporter
+      - created
+      - updated
+      - duedate
+      - resolutiondate
+      - resolution
+      - labels
+      - components
+      - fixVersions
+      - versions          # Affects versions
+      - environment
+      - timetracking
+      - issuelinks
+      - comment
+      - attachment
+      - parent
+      - subtasks
+      - project
+
+    # Custom fields — use the customfield_XXXXX IDs from --list-fields output
+    # Examples (uncomment and replace with your actual field IDs):
+    custom:
+      # - customfield_10001   # Story Points
+      # - customfield_10002   # Epic Name
+      # - customfield_10014   # Epic Link
+      # - customfield_10020   # Sprint
+      # - customfield_10300   # Team

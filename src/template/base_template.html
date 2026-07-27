@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ project.name }} ({{ project.key }}) — Knowledge Base</title>
+<meta name="description" content="Jira Knowledge Base export for {{ project.name }}">
+<meta name="generated-at" content="{{ generated_at_iso }}">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   CSS VARIABLES & THEME
+═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface2: #f8f9fa;
+  --border: #dfe1e6;
+  --text: #172b4d;
+  --text-muted: #6b778c;
+  --text-light: #97a0af;
+  --primary: #0052cc;
+  --primary-hover: #0065ff;
+  --primary-light: #deebff;
+  --accent: #6554c0;
+  --success: #00875a;
+  --success-bg: #e3fcef;
+  --warning: #ff8b00;
+  --warning-bg: #fffae6;
+  --danger: #de350b;
+  --danger-bg: #ffebe6;
+  --info: #0065ff;
+  --info-bg: #deebff;
+  --sidebar-width: 300px;
+  --header-height: 56px;
+  --radius: 4px;
+  --radius-lg: 8px;
+  --shadow: 0 1px 3px rgba(9,30,66,0.13);
+  --shadow-md: 0 4px 12px rgba(9,30,66,0.15);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --transition: 0.18s ease;
+}
+[data-theme="dark"] {
+  --bg: #161b22;
+  --surface: #1c2128;
+  --surface2: #22272e;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-light: #6e7681;
+  --primary: #58a6ff;
+  --primary-hover: #79b8ff;
+  --primary-light: #1f3a5f;
+  --accent: #9d8cd4;
+  --success: #3fb950;
+  --success-bg: #0d2714;
+  --warning: #d29922;
+  --warning-bg: #2d1f00;
+  --danger: #f85149;
+  --danger-bg: #2d0d0a;
+  --info: #58a6ff;
+  --info-bg: #0d2035;
+  --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+a { color: var(--primary); text-decoration: none; }
+a:hover { color: var(--primary-hover); text-decoration: underline; }
+code, pre { font-family: var(--font-mono); }
+img { max-width: 100%; height: auto; }
+button { cursor: pointer; font-family: var(--font); }
+ul, ol { padding-left: 1.5em; }
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════════════════════ */
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* Header */
+#header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--header-height);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  box-shadow: var(--shadow);
+}
+#header .logo { font-weight: 700; font-size: 1.1rem; color: var(--primary); white-space: nowrap; }
+#header .project-badge {
+  background: var(--primary-light); color: var(--primary);
+  padding: 2px 8px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;
+}
+#search-container { flex: 1; max-width: 480px; margin: 0 auto; position: relative; }
+#search-input {
+  width: 100%; padding: 7px 36px 7px 36px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface2); color: var(--text);
+  font-size: 0.875rem; outline: none; transition: border-color var(--transition), box-shadow var(--transition);
+}
+#search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
+#search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; font-size: 14px; }
+#search-clear { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); background: none; border: none; padding: 0; display: none; font-size: 16px; }
+#theme-toggle {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 5px 8px; color: var(--text-muted); font-size: 1rem;
+  transition: background var(--transition);
+}
+#theme-toggle:hover { background: var(--surface2); }
+#stats-bar { display: flex; gap: 12px; align-items: center; white-space: nowrap; }
+#stats-bar span { font-size: 0.78rem; color: var(--text-muted); }
+#stats-bar strong { color: var(--text); }
+
+/* Body split */
+#body { display: flex; margin-top: var(--header-height); min-height: calc(100vh - var(--header-height)); }
+
+/* Sidebar */
+#sidebar {
+  width: var(--sidebar-width); flex-shrink: 0;
+  background: var(--surface); border-right: 1px solid var(--border);
+  position: fixed; top: var(--header-height); bottom: 0; left: 0;
+  overflow-y: auto; overflow-x: hidden;
+  transition: transform var(--transition);
+  z-index: 50;
+}
+#sidebar::-webkit-scrollbar { width: 5px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.sidebar-section { padding: 0; }
+.sidebar-section-header {
+  padding: 10px 14px 6px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--text-muted); text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+}
+.sidebar-section-header:hover { color: var(--text); }
+.sidebar-section-content { overflow: hidden; }
+.sidebar-section-content.collapsed { display: none; }
+
+.sidebar-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px; cursor: pointer;
+  border-left: 3px solid transparent;
+  color: var(--text-muted); font-size: 0.85rem;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  text-decoration: none;
+}
+.sidebar-nav-item:hover { background: var(--surface2); color: var(--text); text-decoration: none; }
+.sidebar-nav-item.active { background: var(--primary-light); border-left-color: var(--primary); color: var(--primary); font-weight: 600; }
+.sidebar-nav-item .icon { font-size: 0.9rem; width: 18px; text-align: center; flex-shrink: 0; }
+.sidebar-nav-item .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-nav-item .count { font-size: 0.72rem; color: var(--text-light); background: var(--surface2); padding: 1px 5px; border-radius: 8px; flex-shrink: 0; }
+.sidebar-nav-item.active .count { background: var(--primary-light); color: var(--primary); }
+
+/* Tree indentation */
+.tree-child { padding-left: 28px; }
+.tree-grandchild { padding-left: 48px; }
+
+/* Main content */
+#main {
+  margin-left: var(--sidebar-width);
+  flex: 1; min-width: 0;
+  padding: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SEARCH RESULTS OVERLAY
+═══════════════════════════════════════════════════════════════ */
+#search-results {
+  position: fixed; top: calc(var(--header-height) + 4px);
+  left: 50%; transform: translateX(-50%);
+  width: min(560px, 92vw);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+  z-index: 200; display: none; max-height: 480px; overflow-y: auto;
+}
+#search-results.visible { display: block; }
+.search-result-item {
+  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--surface2); }
+.search-result-key { font-size: 0.78rem; font-weight: 700; color: var(--primary); }
+.search-result-summary { font-size: 0.88rem; color: var(--text); margin-top: 2px; }
+.search-result-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
+.search-no-results { padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+.search-result-highlight { background: #fff176; border-radius: 2px; padding: 0 1px; color: #172b4d; }
+[data-theme="dark"] .search-result-highlight { background: #4d3e00; color: #e6edf3; }
+
+/* ═══════════════════════════════════════════════════════════════
+   FILTER BAR
+═══════════════════════════════════════════════════════════════ */
+#filter-bar {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 10px 14px;
+  margin-bottom: 20px;
+}
+#filter-bar label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
+.filter-select {
+  padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface2); color: var(--text); font-size: 0.82rem;
+  cursor: pointer;
+}
+.filter-select:focus { outline: none; border-color: var(--primary); }
+#filter-reset { padding: 4px 10px; background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); font-size: 0.82rem; }
+#filter-reset:hover { background: var(--surface2); }
+#filter-count { margin-left: auto; font-size: 0.82rem; color: var(--text-muted); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ISSUE CARDS (list view)
+═══════════════════════════════════════════════════════════════ */
+.view-section { display: none; }
+.view-section.active { display: block; }
+
+.issue-list { display: flex; flex-direction: column; gap: 6px; }
+.issue-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 12px 16px;
+  cursor: pointer; transition: border-color var(--transition), box-shadow var(--transition);
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.issue-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+.issue-card.selected { border-color: var(--primary); background: var(--primary-light); }
+.issue-card-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.issue-card-body { flex: 1; min-width: 0; }
+.issue-card-title { font-size: 0.9rem; font-weight: 600; color: var(--text); display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.issue-card-key { font-size: 0.78rem; font-weight: 700; color: var(--primary); flex-shrink: 0; }
+.issue-card-summary { flex: 1; }
+.issue-card-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 5px; }
+.issue-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ISSUE DETAIL PANEL
+═══════════════════════════════════════════════════════════════ */
+#issue-detail {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 0;
+  display: none;
+}
+#issue-detail.visible { display: block; }
+.detail-header {
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.detail-header-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+.detail-header-body { flex: 1; min-width: 0; }
+.detail-key { font-size: 0.82rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.detail-summary { font-size: 1.15rem; font-weight: 700; color: var(--text); line-height: 1.4; }
+.detail-back { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 10px; color: var(--text-muted); font-size: 0.82rem; flex-shrink: 0; }
+.detail-back:hover { background: var(--surface2); }
+
+.detail-body { display: grid; grid-template-columns: 1fr 260px; gap: 0; }
+.detail-main { padding: 20px 24px; border-right: 1px solid var(--border); min-width: 0; }
+.detail-sidebar { padding: 20px 16px; }
+
+.detail-section { margin-bottom: 24px; }
+.detail-section-title {
+  font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 10px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-description {
+  font-size: 0.9rem; line-height: 1.7; color: var(--text);
+}
+.detail-description p { margin-bottom: 0.8em; }
+.detail-description ul, .detail-description ol { margin-bottom: 0.8em; padding-left: 1.5em; }
+.detail-description pre { background: var(--surface2); padding: 12px; border-radius: var(--radius); overflow-x: auto; font-size: 0.82rem; margin-bottom: 0.8em; border: 1px solid var(--border); }
+.detail-description code { background: var(--surface2); padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+.detail-description pre code { background: none; padding: 0; }
+.detail-description table { border-collapse: collapse; width: 100%; margin-bottom: 0.8em; font-size: 0.85rem; }
+.detail-description th, .detail-description td { border: 1px solid var(--border); padding: 6px 10px; }
+.detail-description th { background: var(--surface2); font-weight: 600; }
+.detail-description blockquote { border-left: 3px solid var(--border); padding-left: 12px; color: var(--text-muted); margin-bottom: 0.8em; }
+.detail-description img { max-width: 100%; border-radius: var(--radius); border: 1px solid var(--border); cursor: zoom-in; }
+.detail-empty { color: var(--text-muted); font-style: italic; font-size: 0.875rem; }
+
+/* Fields grid */
+.fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.field-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.field-row:last-child { border-bottom: none; }
+.field-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 2px; }
+.field-value { font-size: 0.85rem; color: var(--text); }
+.field-value-empty { color: var(--text-light); font-style: italic; }
+
+/* User chip */
+.user-chip { display: inline-flex; align-items: center; gap: 6px; }
+.user-avatar {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+}
+.user-avatar img { width: 24px; height: 24px; border-radius: 50%; }
+.user-name { font-size: 0.85rem; }
+
+/* Badges */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 12px;
+  font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+}
+.badge-todo { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.badge-inprogress { background: var(--info-bg); color: var(--info); border: 1px solid var(--info); }
+.badge-done { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+.badge-blocked { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
+
+.priority-critical { color: var(--danger); font-weight: 700; }
+.priority-high { color: #ff5630; font-weight: 600; }
+.priority-medium { color: var(--warning); }
+.priority-low { color: var(--success); }
+.priority-lowest { color: var(--text-muted); }
+
+.tag {
+  display: inline-block; padding: 1px 7px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 0.75rem; color: var(--text-muted);
+}
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Issue links */
+.issue-link-group { margin-bottom: 10px; }
+.issue-link-group-title { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+.issue-link-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: var(--radius);
+  background: var(--surface2); margin-bottom: 3px; cursor: pointer;
+  transition: background var(--transition);
+}
+.issue-link-item:hover { background: var(--primary-light); }
+.issue-link-key { font-size: 0.78rem; font-weight: 700; color: var(--primary); }
+.issue-link-summary { font-size: 0.82rem; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Comments */
+.comment {
+  display: flex; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.comment:last-child { border-bottom: none; }
+.comment-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+}
+.comment-body { flex: 1; min-width: 0; }
+.comment-header { display: flex; gap: 10px; align-items: baseline; margin-bottom: 5px; flex-wrap: wrap; }
+.comment-author { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.comment-date { font-size: 0.75rem; color: var(--text-muted); }
+.comment-content { font-size: 0.875rem; line-height: 1.6; color: var(--text); }
+.comment-content p { margin-bottom: 0.5em; }
+.comment-content p:last-child { margin-bottom: 0; }
+.comment-content code { background: var(--surface2); padding: 1px 4px; border-radius: 3px; font-size: 0.82em; }
+.comment-content pre { background: var(--surface2); padding: 10px; border-radius: var(--radius); overflow-x: auto; font-size: 0.82rem; margin: 6px 0; border: 1px solid var(--border); }
+
+/* Attachments */
+.attachments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.attachment-item {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; cursor: pointer; transition: border-color var(--transition), box-shadow var(--transition);
+  background: var(--surface2);
+}
+.attachment-item:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+.attachment-preview { width: 100%; height: 80px; object-fit: cover; display: block; }
+.attachment-file-icon { width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 2rem; background: var(--surface2); }
+.attachment-name { padding: 5px 7px; font-size: 0.72rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-size { padding: 0 7px 5px; font-size: 0.68rem; color: var(--text-muted); }
+.attachment-skipped { opacity: 0.55; }
+
+/* Worklogs */
+.worklog-item { padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: flex-start; }
+.worklog-item:last-child { border-bottom: none; }
+.worklog-time { font-weight: 700; color: var(--primary); font-size: 0.85rem; min-width: 60px; flex-shrink: 0; }
+.worklog-meta { font-size: 0.8rem; color: var(--text-muted); }
+.worklog-comment { font-size: 0.82rem; color: var(--text); margin-top: 2px; }
+
+/* Changelog */
+.changelog-entry { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.changelog-entry:last-child { border-bottom: none; }
+.changelog-who { font-weight: 600; color: var(--text); }
+.changelog-when { color: var(--text-muted); }
+.changelog-item { margin-top: 3px; display: flex; align-items: baseline; gap: 6px; }
+.changelog-field { color: var(--text-muted); min-width: 80px; flex-shrink: 0; }
+.changelog-arrow { color: var(--text-light); }
+.changelog-value { color: var(--text); }
+
+/* Custom fields */
+.custom-fields-list { display: flex; flex-direction: column; gap: 4px; }
+.custom-field-item { display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.custom-field-item:last-child { border-bottom: none; }
+.custom-field-name { color: var(--text-muted); min-width: 140px; flex-shrink: 0; font-size: 0.78rem; }
+.custom-field-value { color: var(--text); flex: 1; word-break: break-word; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROJECT OVERVIEW / DASHBOARD
+═══════════════════════════════════════════════════════════════ */
+.overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px;
+  text-align: center;
+}
+.stat-card .stat-number { font-size: 2rem; font-weight: 800; color: var(--primary); line-height: 1; }
+.stat-card .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.chart-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px;
+}
+.chart-card h3 { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+.bar-chart { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: flex; align-items: center; gap: 8px; }
+.bar-label { font-size: 0.78rem; color: var(--text-muted); width: 120px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.bar-track { flex: 1; height: 16px; background: var(--surface2); border-radius: 8px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 8px; background: var(--primary); min-width: 4px; transition: width 0.4s ease; }
+.bar-value { font-size: 0.75rem; color: var(--text-muted); min-width: 28px; }
+
+/* Sprint / Component / Version group views */
+.group-section { margin-bottom: 28px; }
+.group-title {
+  font-size: 0.95rem; font-weight: 700; color: var(--text);
+  padding: 10px 14px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+}
+.group-title .group-count { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); background: var(--border); padding: 1px 7px; border-radius: 10px; }
+.group-body { border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden; }
+
+/* Breadcrumb */
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; flex-wrap: wrap; }
+.breadcrumb-sep { color: var(--text-light); }
+.breadcrumb-item { cursor: pointer; }
+.breadcrumb-item:hover { color: var(--primary); }
+.breadcrumb-item.current { color: var(--text); font-weight: 600; cursor: default; }
+
+/* Image lightbox */
+#lightbox {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+}
+#lightbox.visible { display: flex; }
+#lightbox img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius-lg); }
+#lightbox-close { position: absolute; top: 16px; right: 20px; color: #fff; font-size: 2rem; background: none; border: none; cursor: pointer; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+.tab-btn {
+  padding: 8px 16px; background: none; border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -2px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);
+  cursor: pointer; transition: color var(--transition), border-color var(--transition);
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Back to top */
+#back-to-top {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90;
+  background: var(--primary); color: #fff; border: none; border-radius: 50%;
+  width: 40px; height: 40px; font-size: 1.1rem;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-md); transition: background var(--transition), opacity var(--transition);
+}
+#back-to-top.visible { display: flex; }
+#back-to-top:hover { background: var(--primary-hover); }
+
+/* Print styles */
+@media print {
+  #header, #sidebar, #filter-bar, #back-to-top, #search-results { display: none !important; }
+  #main { margin-left: 0 !important; padding: 0 !important; }
+  .issue-card { break-inside: avoid; }
+  #issue-detail { display: block !important; border: none; }
+  .detail-body { grid-template-columns: 1fr; }
+  .detail-main { border-right: none; }
+  a { color: inherit; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  :root { --sidebar-width: 0px; }
+  #sidebar { transform: translateX(-300px); width: 300px; }
+  #sidebar.open { transform: translateX(0); }
+  #main { margin-left: 0; padding: 14px; }
+  .detail-body { grid-template-columns: 1fr; }
+  .detail-main { border-right: none; }
+  .chart-row { grid-template-columns: 1fr; }
+  .fields-grid { grid-template-columns: 1fr; }
+  #stats-bar { display: none; }
+  #menu-btn { display: flex !important; }
+}
+#menu-btn { display: none; background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; color: var(--text-muted); font-size: 1rem; }
+
+/* Skeleton loader */
+.skeleton { background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s infinite; border-radius: var(--radius); }
+@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Tooltip */
+[data-tooltip] { position: relative; }
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip); position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--surface); padding: 4px 8px; border-radius: var(--radius);
+  font-size: 0.75rem; white-space: nowrap; pointer-events: none; z-index: 500;
+}
+
+/* Scrollable tabs content area */
+#main-scroll { max-height: calc(100vh - var(--header-height)); overflow-y: auto; padding: 24px; }
+
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════ -->
+<header id="header">
+  <button id="menu-btn" aria-label="Toggle sidebar">☰</button>
+  <span class="logo">📚 Knowledge Base</span>
+  <span class="project-badge">{{ project.key }}</span>
+  <div id="search-container">
+    <span id="search-icon">🔍</span>
+    <input id="search-input" type="text" placeholder="Search issues… (Ctrl+K)" autocomplete="off" spellcheck="false">
+    <button id="search-clear" aria-label="Clear search">✕</button>
+  </div>
+  <div id="stats-bar">
+    <span><strong>{{ stats.total_issues }}</strong> issues</span>
+    <span><strong>{{ stats.total_comments }}</strong> comments</span>
+    <span><strong>{{ stats.total_attachments }}</strong> attachments</span>
+  </div>
+  <button id="theme-toggle" aria-label="Toggle dark mode" data-tooltip="Toggle dark/light mode">🌙</button>
+</header>
+
+<!-- ═══ SEARCH RESULTS OVERLAY ═══════════════════════════════ -->
+<div id="search-results" role="listbox" aria-label="Search results"></div>
+
+<!-- ═══ LIGHTBOX ═════════════════════════════════════════════ -->
+<div id="lightbox" role="dialog" aria-modal="true">
+  <button id="lightbox-close" aria-label="Close image">✕</button>
+  <img id="lightbox-img" src="" alt="Attachment preview">
+</div>
+
+<!-- ═══ BODY ══════════════════════════════════════════════════ -->
+<div id="body">
+
+<!-- ─── SIDEBAR ──────────────────────────────────────────── -->
+<nav id="sidebar" aria-label="Navigation">
+
+  <!-- Overview -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-header" onclick="toggleSection(this)">
+      <span>📊 Overview</span><span>▾</span>
+    </div>
+    <div class="sidebar-section-content">
+      <a class="sidebar-nav-item active" onclick="showView('overview')" href="#overview">
+        <span class="icon">🏠</span><span class="label">Project Overview</span>
+      </a>
+      <a class="sidebar-nav-item" onclick="showView('all-issues')" href="#all-issues">
+        <span class="icon">📋</span><span class="label">All Issues</span>
+        <span class="count">{{ stats.total_issues }}</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- By Type -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-header" onclick="toggleSection(this)">
+      <span>🏷️ By Type</span><span>▾</span>
+    </div>
+    <div class="sidebar-section-content">
+      {% for type_name, keys in issues_by_type.items() | sort %}
+      <a class="sidebar-nav-item" onclick="showView('type-{{ type_name | sanitize_anchor }}')" href="#type-{{ type_name | sanitize_anchor }}">
+        <span class="icon">{{ type_name | issuetype_icon }}</span>
+        <span class="label">{{ type_name }}</span>
+        <span class="count">{{ keys | length }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- By Status -->
+  <div class="sidebar-section">
+    <div class="sidebar-section-header" onclick="toggleSection(this)">
+      <span>🔄 By Status</span><span>▾</span>
+    </div>
+    <div class="sidebar-section-content">
+      {% for status_name, keys in issues_by_status.items() | sort %}
+      <a class="sidebar-nav-item" onclick="showView('status-{{ status_name | sanitize_anchor }}')" href="#status-{{ status_name | sanitize_anchor }}">
+        <span class="icon">●</span>
+        <span class="label">{{ status_name }}</span>
+        <span class="count">{{ keys | length }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Epics Tree -->
+  {% if hierarchy.epics %}
+  <div class="sidebar-section">
+    <div class="sidebar-section-header" onclick="toggleSection(this)">
+      <span>⚡ Epics</span><span>▾</span>
+    </div>
+    <div class="sidebar-section-content">
+      {% for epic_key, epic_node in hierarchy.epics.items() %}
+      {% set epic = epic_node.issue %}
+      <a class="sidebar-nav-item" onclick="openIssue('{{ epic_key }}')" href="#issue-{{ epic_key | sanitize_anchor }}">
+        <span class="icon">⚡</span>
+        <span class="label">{{ epic_key }}: {{ epic.summary[:30] }}{% if epic.summary|length > 30 %}…{% endif %}</span>
+        <span class="count">{{ epic_node.children | length }}</span>
+      </a>
+      {% endfor %}
+      {% if hierarchy.orphans %}
+      <a class="sidebar-nav-item" onclick="showView('orphans')" href="#orphans">
+        <span class="icon">📭</span><span class="label">Unassigned to Epic</span>
+        <span class="count">{{ hierarchy.orphans | length }}</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Sprints -->
+  {% if sprints %}
+  <div class="sidebar-section">
+    <div class="sidebar-section-header" onclick="toggleSection(this)">
+      <span>🏃 Sprints</span><span>▾</span>
+    </div>
+    <div class="sidebar-section-content">
+      {% for sprint in sprints | sort(attribute='name') %}
+      <a class="sidebar-nav-item" onclick="showView('sprint-{{ sprint.id | sanitize_anchor }}')" href="#sprint-{{ sprint.id | sanitize_anchor }}">
+        <span class="icon">{% if sprint.state == 'active' %}🟢{% elif sprint.state == 'closed' %}⬜{% else %}🔵{% endif %}</span>
+        <span class="label">{{ sprint.name }}</span>
+        <span class="count">{{ (issues_by_sprint.get(sprint.name, [])) | length }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Components -->
+  {% if components %}
+  <div class="sidebar-section">
+    <div class="sidebar-section-header" onclick="toggleSection(this)">
+      <span>🧩 Components</span><span>▾</span>
+    </div>
+    <div class="sidebar-section-content">
+      {% for comp in components | sort(attribute='name') %}
+      <a class="sidebar-nav-item" onclick="showView('component-{{ comp.name | sanitize_anchor }}')" href="#component-{{ comp.name | sanitize_anchor }}">
+        <span class="icon">🧩</span>
+        <span class="label">{{ comp.name }}</span>
+        <span class="count">{{ (issues_by_component.get(comp.name, [])) | length }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Versions -->
+  {% if versions %}
+  <div class="sidebar-section">
+    <div class="sidebar-section-header" onclick="toggleSection(this)">
+      <span>🏷️ Versions</span><span>▾</span>
+    </div>
+    <div class="sidebar-section-content">
+      {% for ver in versions | sort(attribute='name') %}
+      <a class="sidebar-nav-item" onclick="showView('version-{{ ver.name | sanitize_anchor }}')" href="#version-{{ ver.name | sanitize_anchor }}">
+        <span class="icon">{% if ver.released %}✅{% else %}🔖{% endif %}</span>
+        <span class="label">{{ ver.name }}</span>
+        <span class="count">{{ (issues_by_version.get(ver.name, [])) | length }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Footer -->
+  <div style="padding: 16px 14px; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--text-light);">
+    Generated {{ generated_at }}<br>
+    {{ project.name }}
+  </div>
+
+</nav>
+<!-- end sidebar -->
+
+<!-- ─── MAIN CONTENT ─────────────────────────────────────── -->
+<main id="main">
+
+<!-- Issue Detail (hidden by default, shown when issue clicked) -->
+<div id="issue-detail"></div>
+
+<!-- Filter Bar (shown in list views) -->
+<div id="filter-bar">
+  <label>Filter:</label>
+  <select id="filter-type" class="filter-select"><option value="">All Types</option>
+    {% for t in issues_by_type.keys() | sort %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+  </select>
+  <select id="filter-status" class="filter-select"><option value="">All Statuses</option>
+    {% for s in issues_by_status.keys() | sort %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+  </select>
+  <select id="filter-priority" class="filter-select"><option value="">All Priorities</option>
+    {% for p in ['Highest','High','Medium','Low','Lowest','Blocker','Critical','Major','Minor','Trivial'] %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+  </select>
+  {% if sprints %}
+  <select id="filter-sprint" class="filter-select"><option value="">All Sprints</option>
+    {% for sprint in sprints | sort(attribute='name') %}<option value="{{ sprint.name }}">{{ sprint.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  {% if components %}
+  <select id="filter-component" class="filter-select"><option value="">All Components</option>
+    {% for comp in components | sort(attribute='name') %}<option value="{{ comp.name }}">{{ comp.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <button id="filter-reset">Reset</button>
+  <span id="filter-count"></span>
+</div>
+
+<!-- ── OVERVIEW VIEW ──────────────────────────────────────── -->
+<div id="view-overview" class="view-section active">
+  <div class="overview-grid">
+    <div class="stat-card"><div class="stat-number">{{ stats.total_issues }}</div><div class="stat-label">Total Issues</div></div>
+    <div class="stat-card"><div class="stat-number">{{ stats.total_comments }}</div><div class="stat-label">Comments</div></div>
+    <div class="stat-card"><div class="stat-number">{{ stats.total_attachments }}</div><div class="stat-label">Attachments</div></div>
+    <div class="stat-card"><div class="stat-number">{{ versions | length }}</div><div class="stat-label">Versions</div></div>
+    <div class="stat-card"><div class="stat-number">{{ components | length }}</div><div class="stat-label">Components</div></div>
+    <div class="stat-card"><div class="stat-number">{{ sprints | length }}</div><div class="stat-label">Sprints</div></div>
+  </div>
+  <div class="chart-row">
+    <div class="chart-card">
+      <h3>Issues by Type</h3>
+      <div class="bar-chart" id="chart-type"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Issues by Status</h3>
+      <div class="bar-chart" id="chart-status"></div>
+    </div>
+  </div>
+  <div class="chart-card" style="margin-bottom:20px;">
+    <h3>Project Info</h3>
+    <div class="fields-grid">
+      <div class="field-row"><div class="field-label">Project Key</div><div class="field-value">{{ project.key }}</div></div>
+      <div class="field-row"><div class="field-label">Project Name</div><div class="field-value">{{ project.name }}</div></div>
+      {% if project.lead %}<div class="field-row"><div class="field-label">Lead</div><div class="field-value">{{ project.lead.name }}</div></div>{% endif %}
+      <div class="field-row"><div class="field-label">Generated</div><div class="field-value">{{ generated_at }}</div></div>
+    </div>
+    {% if project.description %}<div style="margin-top:12px;font-size:0.875rem;color:var(--text);">{{ project.description }}</div>{% endif %}
+  </div>
+</div>
+
+<!-- ── ALL ISSUES VIEW ────────────────────────────────────── -->
+<div id="view-all-issues" class="view-section">
+  <div class="issue-list" id="list-all-issues">
+    {% for key, issue in issues.items() | sort %}
+    {% include 'issue_card_macro' ignore missing %}
+    <div class="issue-card" data-key="{{ key }}" data-type="{{ issue.issuetype_name }}" data-status="{{ issue.status_name }}" data-priority="{{ issue.priority_name }}" data-sprint="{{ issue.sprint_name }}" data-component="{{ issue.component_names | join(',') }}" onclick="openIssue('{{ key }}')">
+      <div class="issue-card-icon">{{ issue.issuetype_name | issuetype_icon }}</div>
+      <div class="issue-card-body">
+        <div class="issue-card-title">
+          <span class="issue-card-key">{{ key }}</span>
+          <span class="issue-card-summary">{{ issue.summary }}</span>
+        </div>
+        <div class="issue-card-meta">
+          <span class="badge {{ issue.status_color | status_badge_class(issue.status_name) }}">{{ issue.status_name }}</span>
+          {% if issue.priority_name %}<span class="{{ issue.priority_name | priority_class }}">▲ {{ issue.priority_name }}</span>{% endif %}
+          {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
+          {% if issue.sprint_name and issue.sprint_name != 'None' %}<span class="tag">🏃 {{ issue.sprint_name }}</span>{% endif %}
+          {% for comp in issue.component_names %}<span class="tag">🧩 {{ comp }}</span>{% endfor %}
+          {% if issue.story_points %}<span class="tag">{{ issue.story_points }} pts</span>{% endif %}
+        </div>
+      </div>
+      <div class="issue-card-right">
+        <span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span>
+        {% if issue.comments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">💬 {{ issue.comments | length }}</span>{% endif %}
+        {% if issue.attachments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">📎 {{ issue.attachments | length }}</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ── TYPE VIEWS ─────────────────────────────────────────── -->
+{% for type_name, keys in issues_by_type.items() %}
+<div id="view-type-{{ type_name | sanitize_anchor }}" class="view-section">
+  <h2 style="margin-bottom:16px;font-size:1rem;color:var(--text-muted);">{{ type_name | issuetype_icon }} {{ type_name }} <span style="font-size:0.8rem;">({{ keys|length }})</span></h2>
+  <div class="issue-list">
+    {% for key in keys | sort %}{% set issue = issues[key] %}
+    <div class="issue-card" data-key="{{ key }}" data-type="{{ issue.issuetype_name }}" data-status="{{ issue.status_name }}" data-priority="{{ issue.priority_name }}" data-sprint="{{ issue.sprint_name }}" data-component="{{ issue.component_names | join(',') }}" onclick="openIssue('{{ key }}')">
+      <div class="issue-card-icon">{{ issue.issuetype_name | issuetype_icon }}</div>
+      <div class="issue-card-body">
+        <div class="issue-card-title"><span class="issue-card-key">{{ key }}</span><span class="issue-card-summary">{{ issue.summary }}</span></div>
+        <div class="issue-card-meta">
+          <span class="badge {{ issue.status_color | status_badge_class(issue.status_name) }}">{{ issue.status_name }}</span>
+          {% if issue.priority_name %}<span class="{{ issue.priority_name | priority_class }}">▲ {{ issue.priority_name }}</span>{% endif %}
+          {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
+          {% if issue.story_points %}<span class="tag">{{ issue.story_points }} pts</span>{% endif %}
+        </div>
+      </div>
+      <div class="issue-card-right"><span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- ── STATUS VIEWS ───────────────────────────────────────── -->
+{% for status_name, keys in issues_by_status.items() %}
+<div id="view-status-{{ status_name | sanitize_anchor }}" class="view-section">
+  <h2 style="margin-bottom:16px;font-size:1rem;color:var(--text-muted);">● {{ status_name }} <span style="font-size:0.8rem;">({{ keys|length }})</span></h2>
+  <div class="issue-list">
+    {% for key in keys | sort %}{% set issue = issues[key] %}
+    <div class="issue-card" data-key="{{ key }}" data-type="{{ issue.issuetype_name }}" data-status="{{ issue.status_name }}" data-priority="{{ issue.priority_name }}" data-sprint="{{ issue.sprint_name }}" data-component="{{ issue.component_names | join(',') }}" onclick="openIssue('{{ key }}')">
+      <div class="issue-card-icon">{{ issue.issuetype_name | issuetype_icon }}</div>
+      <div class="issue-card-body">
+        <div class="issue-card-title"><span class="issue-card-key">{{ key }}</span><span class="issue-card-summary">{{ issue.summary }}</span></div>
+        <div class="issue-card-meta">
+          {% if issue.priority_name %}<span class="{{ issue.priority_name | priority_class }}">▲ {{ issue.priority_name }}</span>{% endif %}
+          {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="issue-card-right"><span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- ── SPRINT VIEWS ───────────────────────────────────────── -->
+{% for sprint in sprints %}
+<div id="view-sprint-{{ sprint.id | sanitize_anchor }}" class="view-section">
+  <div style="margin-bottom:16px;">
+    <h2 style="font-size:1rem;color:var(--text-muted);">🏃 {{ sprint.name }}</h2>
+    {% if sprint.goal %}<p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px;">Goal: {{ sprint.goal }}</p>{% endif %}
+    <div style="font-size:0.78rem;color:var(--text-light);margin-top:4px;">
+      State: <strong>{{ sprint.state }}</strong>
+      {% if sprint.startDate %} · Start: {{ sprint.startDate[:10] }}{% endif %}
+      {% if sprint.endDate %} · End: {{ sprint.endDate[:10] }}{% endif %}
+    </div>
+  </div>
+  <div class="issue-list">
+    {% for key in issues_by_sprint.get(sprint.name, []) | sort %}{% set issue = issues[key] %}
+    <div class="issue-card" data-key="{{ key }}" data-type="{{ issue.issuetype_name }}" data-status="{{ issue.status_name }}" data-priority="{{ issue.priority_name }}" data-sprint="{{ issue.sprint_name }}" data-component="{{ issue.component_names | join(',') }}" onclick="openIssue('{{ key }}')">
+      <div class="issue-card-icon">{{ issue.issuetype_name | issuetype_icon }}</div>
+      <div class="issue-card-body">
+        <div class="issue-card-title"><span class="issue-card-key">{{ key }}</span><span class="issue-card-summary">{{ issue.summary }}</span></div>
+        <div class="issue-card-meta">
+          <span class="badge {{ issue.status_color | status_badge_class(issue.status_name) }}">{{ issue.status_name }}</span>
+          {% if issue.priority_name %}<span class="{{ issue.priority_name | priority_class }}">▲ {{ issue.priority_name }}</span>{% endif %}
+          {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
+          {% if issue.story_points %}<span class="tag">{{ issue.story_points }} pts</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- ── COMPONENT VIEWS ────────────────────────────────────── -->
+{% for comp in components %}
+<div id="view-component-{{ comp.name | sanitize_anchor }}" class="view-section">
+  <h2 style="margin-bottom:16px;font-size:1rem;color:var(--text-muted);">🧩 {{ comp.name }}{% if comp.description %} — <span style="font-weight:400;">{{ comp.description }}</span>{% endif %}</h2>
+  <div class="issue-list">
+    {% for key in issues_by_component.get(comp.name, []) | sort %}{% set issue = issues[key] %}
+    <div class="issue-card" data-key="{{ key }}" data-type="{{ issue.issuetype_name }}" data-status="{{ issue.status_name }}" data-priority="{{ issue.priority_name }}" data-sprint="{{ issue.sprint_name }}" data-component="{{ issue.component_names | join(',') }}" onclick="openIssue('{{ key }}')">
+      <div class="issue-card-icon">{{ issue.issuetype_name | issuetype_icon }}</div>
+      <div class="issue-card-body">
+        <div class="issue-card-title"><span class="issue-card-key">{{ key }}</span><span class="issue-card-summary">{{ issue.summary }}</span></div>
+        <div class="issue-card-meta">
+          <span class="badge {{ issue.status_color | status_badge_class(issue.status_name) }}">{{ issue.status_name }}</span>
+          {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- ── VERSION VIEWS ──────────────────────────────────────── -->
+{% for ver in versions %}
+<div id="view-version-{{ ver.name | sanitize_anchor }}" class="view-section">
+  <div style="margin-bottom:16px;">
+    <h2 style="font-size:1rem;color:var(--text-muted);">{% if ver.released %}✅{% else %}🔖{% endif %} {{ ver.name }}</h2>
+    {% if ver.description %}<p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px;">{{ ver.description }}</p>{% endif %}
+    <div style="font-size:0.78rem;color:var(--text-light);margin-top:4px;">
+      Released: <strong>{% if ver.released %}Yes{% else %}No{% endif %}</strong>
+      {% if ver.releaseDate %} · Release Date: {{ ver.releaseDate }}{% endif %}
+    </div>
+  </div>
+  <div class="issue-list">
+    {% for key in issues_by_version.get(ver.name, []) | sort %}{% set issue = issues[key] %}
+    <div class="issue-card" data-key="{{ key }}" data-type="{{ issue.issuetype_name }}" data-status="{{ issue.status_name }}" data-priority="{{ issue.priority_name }}" data-sprint="{{ issue.sprint_name }}" data-component="{{ issue.component_names | join(',') }}" onclick="openIssue('{{ key }}')">
+      <div class="issue-card-icon">{{ issue.issuetype_name | issuetype_icon }}</div>
+      <div class="issue-card-body">
+        <div class="issue-card-title"><span class="issue-card-key">{{ key }}</span><span class="issue-card-summary">{{ issue.summary }}</span></div>
+        <div class="issue-card-meta">
+          <span class="badge {{ issue.status_color | status_badge_class(issue.status_name) }}">{{ issue.status_name }}</span>
+          {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- ── ORPHANS VIEW ───────────────────────────────────────── -->
+{% if hierarchy.orphans %}
+<div id="view-orphans" class="view-section">
+  <h2 style="margin-bottom:16px;font-size:1rem;color:var(--text-muted);">📭 Issues not assigned to an Epic ({{ hierarchy.orphans | length }})</h2>
+  <div class="issue-list">
+    {% for key in hierarchy.orphans | sort %}{% set issue = issues[key] %}
+    <div class="issue-card" data-key="{{ key }}" data-type="{{ issue.issuetype_name }}" data-status="{{ issue.status_name }}" data-priority="{{ issue.priority_name }}" data-sprint="{{ issue.sprint_name }}" data-component="{{ issue.component_names | join(',') }}" onclick="openIssue('{{ key }}')">
+      <div class="issue-card-icon">{{ issue.issuetype_name | issuetype_icon }}</div>
+      <div class="issue-card-body">
+        <div class="issue-card-title"><span class="issue-card-key">{{ key }}</span><span class="issue-card-summary">{{ issue.summary }}</span></div>
+        <div class="issue-card-meta">
+          <span class="badge {{ issue.status_color | status_badge_class(issue.status_name) }}">{{ issue.status_name }}</span>
+          {% if issue.priority_name %}<span class="{{ issue.priority_name | priority_class }}">▲ {{ issue.priority_name }}</span>{% endif %}
+          {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+</main>
+</div><!-- end #body -->
+
+<!-- Back to top -->
+<button id="back-to-top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<!-- ═══ EMBEDDED DATA ════════════════════════════════════════ -->
+<script id="issues-data" type="application/json">
+{{ issues | tojson }}
+</script>
+<script id="lunr-docs" type="application/json">
+{{ lunr_docs_json }}
+</script>
+
+<!-- ═══ APPLICATION JAVASCRIPT ══════════════════════════════ -->
+<script>
+'use strict';
+
+// ── DATA ────────────────────────────────────────────────────
+const ISSUES = JSON.parse(document.getElementById('issues-data').textContent);
+const SEARCH_DOCS = JSON.parse(document.getElementById('lunr-docs').textContent);
+
+// ── SEARCH ENGINE (token-based, no external deps) ───────────
+const searchIndex = (function() {
+  const idx = {};
+  SEARCH_DOCS.forEach(function(doc) {
+    const text = [
+      doc.key, doc.summary, doc.description,
+      doc.issuetype, doc.status, doc.priority,
+      doc.assignee, doc.reporter, doc.labels,
+      doc.components, doc.sprint, doc.comments
+    ].join(' ').toLowerCase();
+    idx[doc.id] = { doc: doc, text: text };
+  });
+
+  return {
+    search: function(query) {
+      if (!query || query.trim().length < 2) return [];
+      const terms = query.toLowerCase().trim().split(/\s+/).filter(t => t.length > 1);
+      const results = [];
+      for (const id in idx) {
+        const entry = idx[id];
+        let score = 0;
+        terms.forEach(function(term) {
+          const keyMatch = entry.doc.key && entry.doc.key.toLowerCase().includes(term);
+          const summaryMatch = entry.doc.summary && entry.doc.summary.toLowerCase().includes(term);
+          if (keyMatch) score += 10;
+          if (summaryMatch) score += 5;
+          if (entry.text.includes(term)) score += 1;
+        });
+        if (score > 0) results.push({ id: id, score: score, doc: entry.doc });
+      }
+      results.sort(function(a, b) { return b.score - a.score; });
+      return results.slice(0, 30);
+    }
+  };
+})();
+
+// ── STATE ────────────────────────────────────────────────────
+let currentView = 'overview';
+let currentIssueKey = null;
+
+// ── VIEW MANAGEMENT ──────────────────────────────────────────
+function showView(viewId) {
+  document.querySelectorAll('.view-section').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  const target = document.getElementById('view-' + viewId);
+  if (target) {
+    target.classList.add('active');
+    currentView = viewId;
+  }
+  document.getElementById('issue-detail').classList.remove('visible');
+  document.getElementById('issue-detail').style.display = 'none';
+  currentIssueKey = null;
+
+  // Show/hide filter bar
+  const filterBar = document.getElementById('filter-bar');
+  const listViews = ['all-issues'];
+  filterBar.style.display = (viewId === 'overview') ? 'none' : 'flex';
+
+  // Update sidebar active state
+  document.querySelectorAll('.sidebar-nav-item').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  applyFilters();
+  window.scrollTo(0, 0);
+}
+
+// ── ISSUE DETAIL ─────────────────────────────────────────────
+function openIssue(key) {
+  const issue = ISSUES[key];
+  if (!issue) return;
+  currentIssueKey = key;
+
+  const detail = document.getElementById('issue-detail');
+  detail.innerHTML = renderIssueDetail(issue);
+  detail.classList.add('visible');
+  detail.style.display = 'block';
+
+  // Hide all views
+  document.querySelectorAll('.view-section').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.getElementById('filter-bar').style.display = 'none';
+
+  detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Bind image zoom
+  detail.querySelectorAll('.detail-description img, .attachment-preview').forEach(function(img) {
+    img.addEventListener('click', function() { openLightbox(this.src); });
+  });
+}
+
+function renderIssueDetail(issue) {
+  const escHtml = function(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"');
+  };
+  const fmtDate = function(iso) {
+    if (!iso) return '';
+    try { var d = new Date(iso); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); } catch(e) { return iso.substring(0,10); }
+  };
+  const userChip = function(u) {
+    if (!u) return '<span class="field-value-empty">Unassigned</span>';
+    var ini = (u.name||'?').split(' ').map(function(p){return p[0]||'';}).slice(0,2).join('').toUpperCase();
+    return '<span class="user-chip"><span class="user-avatar">'+escHtml(ini)+'</span><span class="user-name">'+escHtml(u.name)+'</span></span>';
+  };
+  var typeIcon = {'Epic':'⚡','Story':'📖','Bug':'🐛','Task':'✅','Sub-task':'↳','Feature':'🚀','Improvement':'✨'};
+  var iconChar = typeIcon[issue.issuetype_name] || '📋';
+
+  var html = '<div class="detail-header">';
+  html += '<div class="detail-header-icon">'+iconChar+'</div>';
+  html += '<div class="detail-header-body">';
+  html += '<div class="detail-key">'+escHtml(issue.key)+'</div>';
+  html += '<div class="detail-summary">'+escHtml(issue.summary)+'</div>';
+  html += '</div>';
+  html += '<button class="detail-back" onclick="goBack()">← Back</button>';
+  html += '</div>';
+
+  html += '<div class="detail-body"><div class="detail-main">';
+
+  // Description
+  html += '<div class="detail-section">';
+  html += '<div class="detail-section-title">Description</div>';
+  if (issue.description_html) {
+    html += '<div class="detail-description">'+issue.description_html+'</div>';
+  } else {
+    html += '<div class="detail-empty">No description provided.</div>';
+  }
+  html += '</div>';
+
+  // Attachments
+  if (issue.attachments && issue.attachments.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Attachments ('+issue.attachments.length+')</div>';
+    html += '<div class="attachments-grid">';
+    issue.attachments.forEach(function(att) {
+      var sizeStr = att.size ? (att.size < 1048576 ? (att.size/1024).toFixed(1)+' KB' : (att.size/1048576).toFixed(1)+' MB') : '';
+      html += '<div class="attachment-item'+(att.skipped?' attachment-skipped':'')+'">';
+      if (att.is_image && att.data_uri) {
+        html += '<img class="attachment-preview" src="'+att.data_uri+'" alt="'+escHtml(att.filename)+'" loading="lazy">';
+      } else if (att.data_uri) {
+        html += '<div class="attachment-file-icon">📄</div>';
+        html += '<a class="attachment-name" href="'+att.data_uri+'" download="'+escHtml(att.filename)+'">⬇ '+escHtml(att.filename)+'</a>';
+      } else {
+        html += '<div class="attachment-file-icon">📎</div>';
+        html += '<div class="attachment-name">'+escHtml(att.filename)+(att.skip_reason?' ('+att.skip_reason+')':'')+'</div>';
+      }
+      if (!att.data_uri) { html += '<div class="attachment-name">'+escHtml(att.filename)+'</div>'; }
+      html += '<div class="attachment-size">'+sizeStr+'</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Issue Links
+  if (issue.issue_links && issue.issue_links.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Linked Issues</div>';
+    var linkGroups = {};
+    issue.issue_links.forEach(function(l) {
+      var label = l.label || l.type;
+      if (!linkGroups[label]) linkGroups[label] = [];
+      linkGroups[label].push(l);
+    });
+    for (var label in linkGroups) {
+      html += '<div class="issue-link-group"><div class="issue-link-group-title">'+escHtml(label)+'</div>';
+      linkGroups[label].forEach(function(l) {
+        html += '<div class="issue-link-item" onclick="openIssue(\''+escHtml(l.key)+'\')">';
+        html += '<span class="issue-link-key">'+escHtml(l.key)+'</span>';
+        html += '<span class="issue-link-summary">'+escHtml(l.summary)+'</span>';
+        if (l.status) html += '<span class="tag">'+escHtml(l.status)+'</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Sub-tasks
+  if (issue.subtask_keys && issue.subtask_keys.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Sub-tasks ('+issue.subtask_keys.length+')</div>';
+    issue.subtask_keys.forEach(function(sk) {
+      var sub = ISSUES[sk];
+      html += '<div class="issue-link-item" onclick="openIssue(\''+escHtml(sk)+'\')">';
+      html += '<span class="issue-link-key">'+escHtml(sk)+'</span>';
+      html += '<span class="issue-link-summary">'+(sub ? escHtml(sub.summary) : sk)+'</span>';
+      if (sub) html += '<span class="tag">'+escHtml(sub.status_name)+'</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Comments
+  html += '<div class="detail-section"><div class="detail-section-title">Comments ('+(issue.comments||[]).length+')</div>';
+  if (!issue.comments || issue.comments.length === 0) {
+    html += '<div class="detail-empty">No comments.</div>';
+  } else {
+    (issue.comments||[]).forEach(function(c) {
+      var author = c.author ? c.author.name : 'Unknown';
+      var ini = author.split(' ').map(function(p){return p[0]||'';}).slice(0,2).join('').toUpperCase();
+      html += '<div class="comment">';
+      html += '<div class="comment-avatar">'+escHtml(ini)+'</div>';
+      html += '<div class="comment-body">';
+      html += '<div class="comment-header"><span class="comment-author">'+escHtml(author)+'</span><span class="comment-date">'+fmtDate(c.created)+'</span></div>';
+      html += '<div class="comment-content">'+(c.body_html || escHtml(c.body_raw || ''))+'</div>';
+      html += '</div></div>';
+    });
+  }
+  html += '</div>';
+
+  // Worklogs
+  if (issue.worklogs && issue.worklogs.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Work Log</div>';
+    issue.worklogs.forEach(function(w) {
+      html += '<div class="worklog-item"><div class="worklog-time">'+escHtml(w.timeSpent)+'</div>';
+      html += '<div><div class="worklog-meta">'+(w.author?escHtml(w.author.name):'?')+' · '+fmtDate(w.started)+'</div>';
+      if (w.comment) html += '<div class="worklog-comment">'+escHtml(w.comment)+'</div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+  }
+
+  // Changelog
+  if (issue.changelog && issue.changelog.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">History</div>';
+    issue.changelog.slice(0,20).forEach(function(entry) {
+      html += '<div class="changelog-entry">';
+      html += '<span class="changelog-who">'+(entry.author?escHtml(entry.author.name):'?')+'</span> ';
+      html += '<span class="changelog-when">'+fmtDate(entry.created)+'</span>';
+      (entry.items||[]).forEach(function(item) {
+        html += '<div class="changelog-item"><span class="changelog-field">'+escHtml(item.field)+'</span>';
+        html += '<span class="changelog-arrow">→</span>';
+        html += '<span class="changelog-value">'+escHtml(item.to||'(empty)')+'</span></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>'; // end detail-main
+
+  // RIGHT SIDEBAR
+  html += '<div class="detail-sidebar">';
+  html += '<div class="detail-section"><div class="fields-grid">';
+
+  var fieldRow = function(label, valueHtml) {
+    return '<div class="field-row"><div class="field-label">'+label+'</div><div class="field-value">'+valueHtml+'</div></div>';
+  };
+  var statusColors = {'To Do':'badge-todo','In Progress':'badge-inprogress','Done':'badge-done','Closed':'badge-done','Resolved':'badge-done','Blocked':'badge-blocked'};
+  var sBadge = statusColors[issue.status_name] || 'badge-todo';
+  html += fieldRow('Status','<span class="badge '+sBadge+'">'+escHtml(issue.status_name)+'</span>');
+  html += fieldRow('Type', escHtml(iconChar+' '+issue.issuetype_name));
+  if (issue.priority_name) html += fieldRow('Priority', escHtml(issue.priority_name));
+  html += fieldRow('Assignee', userChip(issue.assignee));
+  html += fieldRow('Reporter', userChip(issue.reporter));
+  html += fieldRow('Created', fmtDate(issue.created));
+  html += fieldRow('Updated', fmtDate(issue.updated));
+  if (issue.duedate) html += fieldRow('Due Date', escHtml(issue.duedate));
+  if (issue.resolution) html += fieldRow('Resolution', escHtml(issue.resolution));
+  if (issue.story_points) html += fieldRow('Story Points', escHtml(String(issue.story_points)));
+  if (issue.sprint_name && issue.sprint_name !== 'None') html += fieldRow('Sprint', escHtml(issue.sprint_name));
+  if (issue.parent_key) html += fieldRow('Parent', '<span onclick="openIssue(\''+escHtml(issue.parent_key)+'\')" style="cursor:pointer;color:var(--primary);font-weight:600;">'+escHtml(issue.parent_key)+'</span>');
+  if (issue.time_tracking && issue.time_tracking.spent) html += fieldRow('Time Spent', escHtml(issue.time_tracking.spent));
+  if (issue.time_tracking && issue.time_tracking.remaining) html += fieldRow('Remaining', escHtml(issue.time_tracking.remaining));
+
+  html += '</div></div>';
+
+  if (issue.labels && issue.labels.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Labels</div><div class="tags">';
+    issue.labels.forEach(function(l) { html += '<span class="tag">'+escHtml(l)+'</span>'; });
+    html += '</div></div>';
+  }
+
+  if (issue.component_names && issue.component_names.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Components</div><div class="tags">';
+    issue.component_names.forEach(function(c) { html += '<span class="tag">🧩 '+escHtml(c)+'</span>'; });
+    html += '</div></div>';
+  }
+
+  if (issue.fix_version_names && issue.fix_version_names.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Fix Version(s)</div><div class="tags">';
+    issue.fix_version_names.forEach(function(v) { html += '<span class="tag">🔖 '+escHtml(v)+'</span>'; });
+    html += '</div></div>';
+  }
+
+  // Custom fields
+  var cfKeys = Object.keys(issue.custom_fields||{});
+  if (cfKeys.length > 0) {
+    html += '<div class="detail-section"><div class="detail-section-title">Custom Fields</div><div class="custom-fields-list">';
+    cfKeys.forEach(function(fid) {
+      var cf = issue.custom_fields[fid];
+      var val = cf.value;
+      var displayVal = '';
+      if (val === null || val === undefined) displayVal = '';
+      else if (typeof val === 'object' && val !== null && !Array.isArray(val)) displayVal = val.name || val.value || val.displayName || JSON.stringify(val);
+      else if (Array.isArray(val)) displayVal = val.map(function(v){return typeof v==='object'?(v.name||v.value||String(v)):String(v);}).join(', ');
+      else displayVal = String(val);
+      if (displayVal) {
+        html += '<div class="custom-field-item"><div class="custom-field-name">'+escHtml(cf.name)+'</div><div class="custom-field-value">'+escHtml(displayVal)+'</div></div>';
+      }
+    });
+    html += '</div></div>';
+  }
+
+  html += '</div>'; // end detail-sidebar
+  html += '</div>'; // end detail-body
+  return html;
+}
+
+function goBack() {
+  document.getElementById('issue-detail').classList.remove('visible');
+  document.getElementById('issue-detail').style.display = 'none';
+  currentIssueKey = null;
+  showView(currentView || 'all-issues');
+}
+
+// ── FILTERS ──────────────────────────────────────────────────
+function applyFilters() {
+  var fType = (document.getElementById('filter-type')||{}).value || '';
+  var fStatus = (document.getElementById('filter-status')||{}).value || '';
+  var fPriority = (document.getElementById('filter-priority')||{}).value || '';
+  var fSprint = (document.getElementById('filter-sprint')||{});
+  fSprint = fSprint.value || '';
+  var fComponent = (document.getElementById('filter-component')||{});
+  fComponent = fComponent.value || '';
+
+  var cards = document.querySelectorAll('.issue-card');
+  var visible = 0;
+  cards.forEach(function(card) {
+    var show = true;
+    if (fType && card.dataset.type !== fType) show = false;
+    if (fStatus && card.dataset.status !== fStatus) show = false;
+    if (fPriority && card.dataset.priority !== fPriority) show = false;
+    if (fSprint && card.dataset.sprint !== fSprint) show = false;
+    if (fComponent && !(card.dataset.component||'').split(',').includes(fComponent)) show = false;
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  var countEl = document.getElementById('filter-count');
+  if (countEl) countEl.textContent = visible + ' issue' + (visible !== 1 ? 's' : '');
+}
+
+// ── SEARCH UI ────────────────────────────────────────────────
+var searchTimeout = null;
+var searchInput = document.getElementById('search-input');
+var searchResults = document.getElementById('search-results');
+var searchClear = document.getElementById('search-clear');
+
+searchInput.addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  var q = this.value.trim();
+  searchClear.style.display = q ? 'block' : 'none';
+  if (!q) { searchResults.classList.remove('visible'); return; }
+  searchTimeout = setTimeout(function() { performSearch(q); }, 150);
+});
+
+searchInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { clearSearch(); }
+  if (e.key === 'Enter') {
+    var first = searchResults.querySelector('.search-result-item');
+    if (first) { first.click(); }
+  }
+});
+
+searchClear.addEventListener('click', clearSearch);
+
+function clearSearch() {
+  searchInput.value = '';
+  searchClear.style.display = 'none';
+  searchResults.classList.remove('visible');
+  searchResults.innerHTML = '';
+}
+
+function performSearch(q) {
+  var results = searchIndex.search(q);
+  if (results.length === 0) {
+    searchResults.innerHTML = '<div class="search-no-results">No issues found for "<strong>' + q + '</strong>"</div>';
+    searchResults.classList.add('visible');
+    return;
+  }
+  var html = '';
+  results.forEach(function(r) {
+    var issue = ISSUES[r.id];
+    if (!issue) return;
+    var esc = function(s) { return s ? String(s).replace(/</g,'<').replace(/>/g,'>') : ''; };
+    html += '<div class="search-result-item" onclick="clearSearch();openIssue(\'' + r.id + '\')">';
+    html += '<div class="search-result-key">' + esc(r.id) + '</div>';
+    html += '<div class="search-result-summary">' + esc(issue.summary) + '</div>';
+    html += '<div class="search-result-meta">';
+    html += '<span>' + esc(issue.issuetype_name) + '</span>';
+    html += '<span>' + esc(issue.status_name) + '</span>';
+    if (issue.assignee) html += '<span>👤 ' + esc(issue.assignee.name) + '</span>';
+    html += '</div></div>';
+  });
+  searchResults.innerHTML = html;
+  searchResults.classList.add('visible');
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#search-container') && !e.target.closest('#search-results')) {
+    searchResults.classList.remove('visible');
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+  }
+});
+
+// ── THEME TOGGLE ─────────────────────────────────────────────
+var themeToggle = document.getElementById('theme-toggle');
+themeToggle.addEventListener('click', function() {
+  var html = document.documentElement;
+  var isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  themeToggle.textContent = isDark ? '🌙' : '☀️';
+  try { localStorage.setItem('jira-kb-theme', isDark ? 'light' : 'dark'); } catch(e) {}
+});
+(function() {
+  try {
+    var saved = localStorage.getItem('jira-kb-theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      themeToggle.textContent = saved === 'dark' ? '☀️' : '🌙';
+    }
+  } catch(e) {}
+})();
+
+// ── SIDEBAR TOGGLES ──────────────────────────────────────────
+function toggleSection(header) {
+  var content = header.nextElementSibling;
+  var arrow = header.querySelector('span:last-child');
+  if (content.classList.contains('collapsed')) {
+    content.classList.remove('collapsed');
+    if (arrow) arrow.textContent = '▾';
+  } else {
+    content.classList.add('collapsed');
+    if (arrow) arrow.textContent = '▸';
+  }
+}
+
+// ── MOBILE SIDEBAR ───────────────────────────────────────────
+document.getElementById('menu-btn').addEventListener('click', function() {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// ── LIGHTBOX ─────────────────────────────────────────────────
+function openLightbox(src) {
+  var lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = src;
+  lb.classList.add('visible');
+}
+document.getElementById('lightbox-close').addEventListener('click', function() {
+  document.getElementById('lightbox').classList.remove('visible');
+});
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('visible');
+});
+
+// ── BACK TO TOP ───────────────────────────────────────────────
+var backToTop = document.getElementById('back-to-top');
+window.addEventListener('scroll', function() {
+  backToTop.classList.toggle('visible', window.scrollY > 400);
+});
+
+// ── FILTER EVENTS ────────────────────────────────────────────
+document.querySelectorAll('.filter-select').forEach(function(sel) {
+  sel.addEventListener('change', applyFilters);
+});
+document.getElementById('filter-reset').addEventListener('click', function() {
+  document.querySelectorAll('.filter-select').forEach(function(sel) { sel.value = ''; });
+  applyFilters();
+});
+
+// ── OVERVIEW CHARTS ──────────────────────────────────────────
+function renderBarChart(containerId, data) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var total = Object.values(data).reduce(function(a,b){return a+b;},0);
+  var sorted = Object.entries(data).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  var html = '';
+  sorted.forEach(function(entry) {
+    var label = entry[0], count = entry[1];
+    var pct = total > 0 ? Math.max(4, Math.round(count/total*100)) : 0;
+    html += '<div class="bar-row">';
+    html += '<div class="bar-label" title="'+label+'">'+label+'</div>';
+    html += '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div>';
+    html += '<div class="bar-value">'+count+'</div>';
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+var issueTypeCounts = {};
+var statusCounts = {};
+document.querySelectorAll('.issue-card').forEach(function(card) {
+  var t = card.dataset.type || 'Unknown';
+  var s = card.dataset.status || 'Unknown';
+  issueTypeCounts[t] = (issueTypeCounts[t]||0) + 1;
+  statusCounts[s] = (statusCounts[s]||0) + 1;
+});
+renderBarChart('chart-type', issueTypeCounts);
+renderBarChart('chart-status', statusCounts);
+
+// ── INIT ──────────────────────────────────────────────────────
+document.getElementById('filter-bar').style.display = 'none';
+showView('overview');
+
+</script>
+</div><!-- end #app -->
+</body>
+</html>
