@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ issue.key }}: {{ issue.summary }}</title>
+<style>
+body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #172b4d; margin: 0; padding: 16px; background: #fff; }
+h1 { font-size: 1.1rem; color: #172b4d; margin: 0 0 8px; }
+.key { font-size: 0.8rem; font-weight: 700; color: #0052cc; margin-bottom: 6px; }
+.meta-grid { display: grid; grid-template-columns: 140px 1fr; gap: 0; border: 1px solid #dfe1e6; border-radius: 4px; margin: 12px 0; font-size: 0.82rem; }
+.meta-label { padding: 5px 10px; background: #f8f9fa; border-bottom: 1px solid #dfe1e6; font-weight: 600; color: #6b778c; }
+.meta-value { padding: 5px 10px; border-bottom: 1px solid #dfe1e6; }
+.meta-grid .meta-label:last-of-type, .meta-grid .meta-value:last-of-type { border-bottom: none; }
+.section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b778c; border-bottom: 1px solid #dfe1e6; padding-bottom: 5px; margin: 16px 0 10px; }
+.description { font-size: 0.875rem; line-height: 1.7; }
+.description p { margin: 0 0 0.8em; }
+.description pre { background: #f8f9fa; padding: 10px; border: 1px solid #dfe1e6; border-radius: 3px; overflow-x: auto; font-size: 0.82rem; }
+.description code { background: #f8f9fa; padding: 1px 4px; border-radius: 2px; font-size: 0.85em; }
+.description table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin-bottom: 0.8em; }
+.description th, .description td { border: 1px solid #dfe1e6; padding: 5px 8px; }
+.description th { background: #f8f9fa; font-weight: 600; }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+.badge-todo { background: #f4f5f7; color: #6b778c; border: 1px solid #dfe1e6; }
+.badge-inprogress { background: #deebff; color: #0052cc; }
+.badge-done { background: #e3fcef; color: #00875a; }
+.tag { display: inline-block; padding: 1px 6px; background: #f4f5f7; border: 1px solid #dfe1e6; border-radius: 3px; font-size: 0.75rem; margin: 1px; }
+.comment { border-left: 3px solid #dfe1e6; padding: 8px 12px; margin: 8px 0; background: #f8f9fa; }
+.comment-author { font-weight: 700; font-size: 0.82rem; color: #172b4d; }
+.comment-date { font-size: 0.75rem; color: #6b778c; margin-left: 8px; }
+.comment-body { margin-top: 5px; font-size: 0.875rem; line-height: 1.6; }
+.comment-body p { margin: 0 0 0.5em; }
+.link-item { display: block; padding: 4px 0; font-size: 0.85rem; color: #0052cc; text-decoration: none; }
+.link-item:hover { text-decoration: underline; }
+.attachment-item { display: inline-block; padding: 3px 8px; margin: 2px; background: #f4f5f7; border: 1px solid #dfe1e6; border-radius: 3px; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<div class="key">{{ issue.key }}</div>
+<h1>{{ issue.summary }}</h1>
+
+<!-- Core metadata -->
+<div class="meta-grid">
+  <div class="meta-label">Status</div>
+  <div class="meta-value">
+    {% set sc = issue.status_color | lower %}
+    {% if 'done' in issue.status_name | lower or 'closed' in issue.status_name | lower or 'resolved' in issue.status_name | lower %}
+      <span class="badge badge-done">{{ issue.status_name }}</span>
+    {% elif 'progress' in issue.status_name | lower or 'review' in issue.status_name | lower %}
+      <span class="badge badge-inprogress">{{ issue.status_name }}</span>
+    {% else %}
+      <span class="badge badge-todo">{{ issue.status_name }}</span>
+    {% endif %}
+  </div>
+  <div class="meta-label">Type</div>
+  <div class="meta-value">{{ issue.issuetype_name }}</div>
+  <div class="meta-label">Priority</div>
+  <div class="meta-value">{{ issue.priority_name or '—' }}</div>
+  <div class="meta-label">Assignee</div>
+  <div class="meta-value">{% if issue.assignee %}{{ issue.assignee.name }}{% else %}Unassigned{% endif %}</div>
+  <div class="meta-label">Reporter</div>
+  <div class="meta-value">{% if issue.reporter %}{{ issue.reporter.name }}{% else %}—{% endif %}</div>
+  <div class="meta-label">Created</div>
+  <div class="meta-value">{{ issue.created | format_date }}</div>
+  <div class="meta-label">Updated</div>
+  <div class="meta-value">{{ issue.updated | format_date }}</div>
+  {% if issue.duedate %}<div class="meta-label">Due Date</div><div class="meta-value">{{ issue.duedate }}</div>{% endif %}
+  {% if issue.resolution %}<div class="meta-label">Resolution</div><div class="meta-value">{{ issue.resolution }}</div>{% endif %}
+  {% if issue.story_points %}<div class="meta-label">Story Points</div><div class="meta-value">{{ issue.story_points }}</div>{% endif %}
+  {% if issue.sprint_name and issue.sprint_name != 'None' %}<div class="meta-label">Sprint</div><div class="meta-value">{{ issue.sprint_name }}</div>{% endif %}
+  {% if issue.parent_key %}<div class="meta-label">Parent</div><div class="meta-value"><a href="{{ issue.parent_key }}.html">{{ issue.parent_key }}</a></div>{% endif %}
+  {% if issue.component_names %}<div class="meta-label">Components</div><div class="meta-value">{{ issue.component_names | join(', ') }}</div>{% endif %}
+  {% if issue.fix_version_names %}<div class="meta-label">Fix Version(s)</div><div class="meta-value">{{ issue.fix_version_names | join(', ') }}</div>{% endif %}
+  {% if issue.labels %}<div class="meta-label">Labels</div><div class="meta-value">{% for l in issue.labels %}<span class="tag">{{ l }}</span>{% endfor %}</div>{% endif %}
+  {% if issue.time_tracking.spent %}<div class="meta-label">Time Spent</div><div class="meta-value">{{ issue.time_tracking.spent }}</div>{% endif %}
+</div>
+
+<!-- Description -->
+<div class="section-title">Description</div>
+{% if issue.description_html %}
+<div class="description">{{ issue.description_html }}</div>
+{% else %}
+<p style="color:#6b778c;font-style:italic;">No description provided.</p>
+{% endif %}
+
+<!-- Sub-tasks -->
+{% if issue.subtask_keys %}
+<div class="section-title">Sub-tasks ({{ issue.subtask_keys | length }})</div>
+{% for sk in issue.subtask_keys %}
+<a class="link-item" href="{{ sk }}.html">↳ {{ sk }}</a>
+{% endfor %}
+{% endif %}
+
+<!-- Issue links -->
+{% if issue.issue_links %}
+<div class="section-title">Linked Issues</div>
+{% set ns = namespace(last_label='') %}
+{% for link in issue.issue_links %}
+{% if link.label != ns.last_label %}
+<div style="font-size:0.75rem;font-weight:700;color:#6b778c;margin:6px 0 2px;">{{ link.label }}</div>
+{% set ns.last_label = link.label %}
+{% endif %}
+<a class="link-item" href="{{ link.key }}.html">{{ link.key }} — {{ link.summary }}</a>
+{% endfor %}
+{% endif %}
+
+<!-- Attachments -->
+{% if issue.attachments %}
+<div class="section-title">Attachments ({{ issue.attachments | length }})</div>
+<div>
+{% for att in issue.attachments %}
+{% if att.is_image and att.data_uri %}
+<div style="margin:8px 0;"><img src="{{ att.data_uri }}" alt="{{ att.filename }}" style="max-width:400px;border:1px solid #dfe1e6;border-radius:4px;"><br><span style="font-size:0.75rem;color:#6b778c;">{{ att.filename }}</span></div>
+{% elif att.data_uri %}
+<a class="attachment-item" href="{{ att.data_uri }}" download="{{ att.filename }}">⬇ {{ att.filename }}</a>
+{% else %}
+<span class="attachment-item">📎 {{ att.filename }}{% if att.skip_reason %} ({{ att.skip_reason }}){% endif %}</span>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+
+<!-- Comments -->
+{% if issue.comments %}
+<div class="section-title">Comments ({{ issue.comments | length }})</div>
+{% for c in issue.comments %}
+<div class="comment">
+  <span class="comment-author">{{ c.author.name if c.author else 'Unknown' }}</span>
+  <span class="comment-date">{{ c.created | format_date }}</span>
+  <div class="comment-body">
+    {% if c.body_html %}{{ c.body_html }}{% else %}<p>{{ c.body_raw }}</p>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+</body>
+</html>

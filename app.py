@@ -240,6 +240,7 @@ def save_options():
     output_dir = request.form.get("output_dir", "./output").strip() or "./output"
     config["options"]["output_dir"] = output_dir
     session["output_dir"] = output_dir
+    session["output_format"] = request.form.get("output_format", "html")
 
     save_config(config)
     return redirect(url_for("export"))
@@ -360,6 +361,7 @@ def api_start_export():
         return jsonify({"error": "No projects specified"}), 400
 
     config = load_config()
+    output_format = data.get("output_format", session.get("output_format", "html"))
     job_id = str(uuid.uuid4())[:8]
 
     with _jobs_lock:
@@ -376,7 +378,7 @@ def api_start_export():
     # Launch background thread
     thread = threading.Thread(
         target=_run_export_job,
-        args=(job_id, project_keys, config),
+        args=(job_id, project_keys, config, output_format),
         daemon=True,
     )
     thread.start()
@@ -443,18 +445,24 @@ def _job_update(job_id: str, update: dict) -> None:
             _jobs[job_id]["project_updates"].append(update)
 
 
-def _run_export_job(job_id: str, project_keys: List[str], config: dict) -> None:
+def _run_export_job(job_id: str, project_keys: List[str], config: dict, output_format: str = "html") -> None:
     """
-    Background thread: runs extraction + HTML build for all project keys.
+    Background thread: runs extraction + HTML/CHM build for all project keys.
     Posts progress updates to the job store for polling by the UI.
+    output_format: "html" (default) or "chm"
     """
     try:
         from src.jira_client import JiraClient
         from src.attachment_handler import AttachmentHandler
         from src.extractor import Extractor
         from src.html_builder import HTMLBuilder
+        from src.chm_builder import CHMBuilder, hhc_available
 
         _job_log(job_id, f"Connecting to Jira: {config['jira']['base_url']}")
+        _job_log(job_id, f"Output format: {output_format.upper()}")
+        if output_format == "chm" and not hhc_available():
+            _job_log(job_id, "  ⚠ HTML Help Workshop not found — output will be a ZIP of CHM source files")
+
         client = JiraClient(config)
 
         try:
@@ -467,7 +475,8 @@ def _run_export_job(job_id: str, project_keys: List[str], config: dict) -> None:
             return
 
         attachment_handler = AttachmentHandler(client, config)
-        builder = HTMLBuilder(config)
+        builder = CHMBuilder(config) if output_format == "chm" else HTMLBuilder(config)
+        fmt_label = "CHM" if output_format == "chm" else "HTML"
 
         total = len(project_keys)
         for idx, project_key in enumerate(project_keys, 1):
@@ -501,8 +510,8 @@ def _run_export_job(job_id: str, project_keys: List[str], config: dict) -> None:
                                  f"{stats.get('total_comments', 0)} comments, "
                                  f"{stats.get('total_attachments', 0)} attachments")
 
-                # Build HTML
-                _job_log(job_id, f"  Building self-contained HTML…")
+                # Build output
+                _job_log(job_id, f"  Building {fmt_label}…")
                 output_path = builder.build(project_data)
                 file_size = human_file_size(output_path)
                 output_filename = os.path.basename(output_path)

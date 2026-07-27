@@ -143,6 +143,42 @@
     </div>
   </div>
 
+  <!-- Output format -->
+  <div class="card">
+    <div class="card-title">📦 Output Format</div>
+    <div class="form-group">
+      <label>Choose the output format for the knowledge base</label>
+      <div class="radio-group">
+        <div class="radio-btn">
+          <input type="radio" id="fmt-html" name="output_format" value="html" checked>
+          <label for="fmt-html">
+            🌐 Self-contained HTML
+            <span style="font-weight:400;color:var(--text-muted);display:block;font-size:0.78rem;margin-top:2px;">
+              Single .html file — works on all platforms, no software needed
+            </span>
+          </label>
+        </div>
+        <div class="radio-btn">
+          <input type="radio" id="fmt-chm" name="output_format" value="chm">
+          <label for="fmt-chm">
+            📖 CHM (Windows Help File)
+            <span style="font-weight:400;color:var(--text-muted);display:block;font-size:0.78rem;margin-top:2px;">
+              .chm file with built-in TOC, Index & full-text search — Windows only
+            </span>
+          </label>
+        </div>
+      </div>
+      <div id="chm-warning" style="display:none;" class="alert alert-warning" style="margin-top:10px;">
+        <span class="alert-icon">⚠️</span>
+        <div>
+          CHM requires <strong>HTML Help Workshop</strong> (hhc.exe) to be installed on this machine.<br>
+          If not installed, the export will produce a <strong>.zip of HTML source files</strong> instead, which you can compile manually.<br>
+          <a href="https://learn.microsoft.com/en-us/previous-versions/windows/desktop/htmlhelp/microsoft-html-help-downloads" target="_blank">Download HTML Help Workshop</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Estimated size warning -->
   <div class="alert alert-info">
     <span class="alert-icon">💡</span>
@@ -169,6 +205,12 @@ function toggleAttachmentOptions(cb) {
   document.getElementById('attachment-options').style.opacity = cb.checked ? '1' : '0.4';
   document.getElementById('attachment-options').style.pointerEvents = cb.checked ? '' : 'none';
 }
+document.querySelectorAll('input[name="output_format"]').forEach(function(r) {
+  r.addEventListener('change', function() {
+    var isChm = this.value === 'chm';
+    document.getElementById('chm-warning').style.display = isChm ? 'flex' : 'none';
+  });
+});
 // Init
 toggleAttachmentOptions(document.getElementById('embed_attachments'));
 </script>
