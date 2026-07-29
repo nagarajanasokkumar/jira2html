@@ -2,7 +2,7 @@
 """
 jira2html.py
 ------------
-Main CLI entry point for the Jira → Compiled HTML Knowledge Base tool.
+Main CLI entry point for the Jira → Compiled HTML JiraDump tool.
 
 Usage examples:
   python jira2html.py --list-fields --project PROJ1

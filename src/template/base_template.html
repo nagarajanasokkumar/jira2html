@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ project.name }} ({{ project.key }}) — Knowledge Base</title>
-<meta name="description" content="Jira Knowledge Base export for {{ project.name }}">
+<title>{{ project.name }} ({{ project.key }}) — JiraDump</title>
+<meta name="description" content="JiraDump export for {{ project.name }}">
 <meta name="generated-at" content="{{ generated_at_iso }}">
 <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -524,7 +524,7 @@ ul, ol { padding-left: 1.5em; }
 <!-- ═══ HEADER ═══════════════════════════════════════════════ -->
 <header id="header">
   <button id="menu-btn" aria-label="Toggle sidebar">☰</button>
-  <span class="logo">📚 Knowledge Base</span>
+  <span class="logo">📚 JiraDump</span>
   <span class="project-badge">{{ project.key }}</span>
   <div id="search-container">
     <span id="search-icon">🔍</span>
@@ -802,7 +802,11 @@ ul, ol { padding-left: 1.5em; }
           {% if issue.story_points %}<span class="tag">{{ issue.story_points }} pts</span>{% endif %}
         </div>
       </div>
-      <div class="issue-card-right"><span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span></div>
+      <div class="issue-card-right">
+        <span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span>
+        {% if issue.comments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">💬 {{ issue.comments | length }}</span>{% endif %}
+        {% if issue.attachments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">📎 {{ issue.attachments | length }}</span>{% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -824,7 +828,11 @@ ul, ol { padding-left: 1.5em; }
           {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
         </div>
       </div>
-      <div class="issue-card-right"><span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span></div>
+      <div class="issue-card-right">
+        <span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span>
+        {% if issue.comments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">💬 {{ issue.comments | length }}</span>{% endif %}
+        {% if issue.attachments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">📎 {{ issue.attachments | length }}</span>{% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -856,6 +864,11 @@ ul, ol { padding-left: 1.5em; }
           {% if issue.story_points %}<span class="tag">{{ issue.story_points }} pts</span>{% endif %}
         </div>
       </div>
+      <div class="issue-card-right">
+        <span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span>
+        {% if issue.comments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">💬 {{ issue.comments | length }}</span>{% endif %}
+        {% if issue.attachments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">📎 {{ issue.attachments | length }}</span>{% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -876,6 +889,11 @@ ul, ol { padding-left: 1.5em; }
           <span class="badge {{ issue.status_color | status_badge_class(issue.status_name) }}">{{ issue.status_name }}</span>
           {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
         </div>
+      </div>
+      <div class="issue-card-right">
+        <span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span>
+        {% if issue.comments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">💬 {{ issue.comments | length }}</span>{% endif %}
+        {% if issue.attachments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">📎 {{ issue.attachments | length }}</span>{% endif %}
       </div>
     </div>
     {% endfor %}
@@ -905,6 +923,11 @@ ul, ol { padding-left: 1.5em; }
           {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
         </div>
       </div>
+      <div class="issue-card-right">
+        <span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span>
+        {% if issue.comments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">💬 {{ issue.comments | length }}</span>{% endif %}
+        {% if issue.attachments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">📎 {{ issue.attachments | length }}</span>{% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -926,6 +949,11 @@ ul, ol { padding-left: 1.5em; }
           {% if issue.priority_name %}<span class="{{ issue.priority_name | priority_class }}">▲ {{ issue.priority_name }}</span>{% endif %}
           {% if issue.assignee %}<span style="font-size:0.78rem;color:var(--text-muted);">👤 {{ issue.assignee.name }}</span>{% endif %}
         </div>
+      </div>
+      <div class="issue-card-right">
+        <span style="font-size:0.72rem;color:var(--text-light);">{{ issue.created | format_date_short }}</span>
+        {% if issue.comments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">💬 {{ issue.comments | length }}</span>{% endif %}
+        {% if issue.attachments | length > 0 %}<span style="font-size:0.75rem;color:var(--text-muted);">📎 {{ issue.attachments | length }}</span>{% endif %}
       </div>
     </div>
     {% endfor %}

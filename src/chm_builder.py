@@ -188,17 +188,17 @@ def build_hhp(project_key: str, project_name: str, issue_files: List[str]) -> st
     """Build the HHP project file."""
     files_section = "\n".join(issue_files + ["index.html"])
     return f"""[OPTIONS]
-Compiled file={project_key}_knowledge_base.chm
+Compiled file={project_key}_jiradump.chm
 Contents file=toc.hhc
 Index file=index.hhk
 Default topic=index.html
-Title={project_name} Knowledge Base
+Title={project_name} JiraDump
 Language=0x409 English (United States)
 Full-text search=Yes
 Default Window=main
 
 [WINDOWS]
-main="{project_name} Knowledge Base","toc.hhc","index.hhk","index.html","index.html",,,,,0x2520,,0x387e,,,,,,,,0
+main="{project_name} JiraDump","toc.hhc","index.hhk","index.html","index.html",,,,,0x2520,,0x387e,,,,,,,,0
 
 [FILES]
 {files_section}
@@ -235,7 +235,7 @@ def build_index_page(project_data: Dict[str, Any], generated_at: str) -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>{_escape_xml(project['name'])} — Knowledge Base</title>
+<title>{_escape_xml(project['name'])} — JiraDump</title>
 <style>
 body {{ font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #172b4d; margin: 0; padding: 20px; background: #fff; }}
 h1 {{ font-size: 1.3rem; color: #0052cc; margin: 0 0 4px; }}
@@ -356,7 +356,7 @@ class CHMBuilder:
             with open(hhp_path, "w", encoding="utf-8") as f:
                 f.write(hhp_content)
 
-            chm_filename = f"{safe_key}_knowledge_base.chm"
+            chm_filename = f"{safe_key}_jiradump.chm"
             chm_output_path = os.path.join(self.output_dir, chm_filename)
 
             # Try to compile with hhc.exe
@@ -393,7 +393,7 @@ class CHMBuilder:
                 )
 
             # Fallback: ZIP the work directory (hhc not available or failed)
-            zip_filename = f"{safe_key}_knowledge_base_chm_source.zip"
+            zip_filename = f"{safe_key}_jiradump_chm_source.zip"
             zip_base = os.path.join(self.output_dir, zip_filename.replace(".zip", ""))
             shutil.make_archive(zip_base, "zip", work_dir)
             zip_path = zip_base + ".zip"

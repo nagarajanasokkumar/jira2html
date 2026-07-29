@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>🚀 Exporting Knowledge Base</h1>
+  <h1>🚀 Exporting JiraDump</h1>
   <p>Your Jira projects are being exported. This may take a few minutes.</p>
 </div>
 
@@ -219,7 +219,7 @@ function showDownloads() {
     item.innerHTML =
       '<div class="download-item-icon">📄</div>' +
       '<div class="download-item-info">' +
-        '<div class="download-item-name">' + f.key + '_knowledge_base.html</div>' +
+        '<div class="download-item-name">' + f.key + '_jiradump.html</div>' +
         '<div class="download-item-meta">' + (f.name || '') + (f.size ? ' · ' + f.size : '') + '</div>' +
       '</div>' +
       '<a href="/download/' + encodeURIComponent(f.file) + '" class="btn btn-success" download>' +

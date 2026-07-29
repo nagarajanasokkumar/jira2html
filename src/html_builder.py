@@ -228,7 +228,7 @@ class HTMLBuilder:
 
         # Write output file
         safe_key = re.sub(r"[^\w\-]", "_", project_key)
-        output_filename = f"{safe_key}_knowledge_base.html"
+        output_filename = f"{safe_key}_jiradump.html"
         output_path = os.path.join(self.output_dir, output_filename)
 
         with open(output_path, "w", encoding="utf-8") as f:

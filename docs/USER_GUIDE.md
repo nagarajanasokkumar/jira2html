@@ -1,9 +1,9 @@
-# Jira Knowledge Base — End User Guide
+# JiraDump — End User Guide
 
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Opening the Knowledge Base](#opening-the-knowledge-base)
+2. [Opening JiraDump](#opening-jiradump)
 3. [Navigating the Interface](#navigating-the-interface)
 4. [Using Search](#using-search)
 5. [Filtering Issues](#filtering-issues)
@@ -19,10 +19,10 @@
 
 ## 1. Getting Started
 
-The Jira Knowledge Base is a **single HTML file** that contains all the issues, comments, attachments, and relationships from your Jira project. It works completely offline — no internet connection or Jira access needed.
+JiraDump is a **single HTML file** that contains all the issues, comments, attachments, and relationships from your Jira project. It works completely offline — no internet connection or Jira access needed.
 
 **What you need:**
-- The HTML file (e.g., `MYPROJECT_knowledge_base.html`)
+- The HTML file (e.g., `MYPROJECT_jiradump.html`)
 - Any modern web browser: **Chrome**, **Firefox**, **Microsoft Edge**, or **Safari**
 
 **What you do NOT need:**
@@ -33,7 +33,7 @@ The Jira Knowledge Base is a **single HTML file** that contains all the issues, 
 
 ---
 
-## 2. Opening the Knowledge Base
+## 2. Opening JiraDump
 
 ### Method 1 — Double-click (Easiest)
 
@@ -57,11 +57,11 @@ Large files (with many embedded images) may take **5–15 seconds** to fully loa
 
 ## 3. Navigating the Interface
 
-The knowledge base has three main areas:
+JiraDump has three main areas:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  📚 Knowledge Base    [PROJ]  🔍 Search…      🌙         │  ← Header
+│  📚 JiraDump    [PROJ]  🔍 Search…      🌙         │  ← Header
 ├──────────────┬──────────────────────────────────────────┤
 │              │                                          │
 │   Sidebar    │           Main Content                   │
@@ -79,7 +79,7 @@ The knowledge base has three main areas:
 
 ### The Header Bar
 
-- **📚 Knowledge Base** — your project name/logo; click to go to overview
+- **📚 JiraDump** — your project name/logo; click to go to overview
 - **[PROJ]** — the project key badge
 - **Search box** — type here to search all issues
 - **🌙 button** — toggle dark/light mode
@@ -376,7 +376,7 @@ A: No. The HTML file is entirely self-contained. Everything — CSS, JavaScript,
 ---
 
 **Q: Do I need a Jira account or login?**
-A: No. The knowledge base is a static HTML file. There is no connection to Jira. Your Jira account is only needed during the initial export by the administrator.
+A: No. JiraDump is a static HTML file. There is no connection to Jira. Your Jira account is only needed during the initial export by the administrator.
 
 ---
 
@@ -418,8 +418,8 @@ A: The data reflects Jira's state at the time the export was run. The export tim
 
 ---
 
-**Q: Can I edit issues in the knowledge base?**
-A: No. The HTML knowledge base is a read-only archive. It is a snapshot of your Jira data at the time of export. To make changes to issues, you would have needed to do so in Jira before the decommission.
+**Q: Can I edit issues in JiraDump?**
+A: No. JiraDump is a read-only archive. It is a snapshot of your Jira data at the time of export. To make changes to issues, you would have needed to do so in Jira before the decommission.
 
 ---
 

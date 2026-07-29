@@ -1,4 +1,4 @@
-# Jira → HTML Knowledge Base — Deployment & Migration Guide
+# Jira → HTML JiraDump — Deployment & Migration Guide
 
 ## Table of Contents
 
@@ -261,7 +261,7 @@ python jira2html.py --project MYPROJECT --config prod_config.yaml
 5. **Process issues** — Normalizes fields, extracts hierarchy, links, comments
 6. **Download attachments** — Images embedded as Base64, other files as download URIs
 7. **Build HTML** — Renders Jinja2 template with all embedded data
-8. **Write output** — Saves `PROJECTKEY_knowledge_base.html` to output directory
+8. **Write output** — Saves `PROJECTKEY_jiradump.html` to output directory
 
 ### Typical Timings
 
@@ -359,14 +359,14 @@ The tool will prompt for each field:
 
 Generated HTML files are saved to the `output_dir` specified in `config.yaml` (default: `./output`).
 
-**File naming:** `PROJECTKEY_knowledge_base.html`
+**File naming:** `PROJECTKEY_jiradump.html`
 
 **Examples:**
 ```
 output/
-├── MYAPP_knowledge_base.html       (e.g., 45 MB for 500 issues with attachments)
-├── PROJ1_knowledge_base.html
-└── PROJ2_knowledge_base.html
+├── MYAPP_jiradump.html       (e.g., 45 MB for 500 issues with attachments)
+├── PROJ1_jiradump.html
+└── PROJ2_jiradump.html
 ```
 
 ### File Size Guidance
@@ -419,7 +419,7 @@ Use this checklist to ensure a complete Jira decommission migration:
 - [ ] Distribute HTML files to all stakeholders
 - [ ] Communicate the new file locations to end users (see USER_GUIDE.md)
 - [ ] Archive the original HTML files to at least two separate storage locations
-- [ ] Verify at least one person from each team can open and search the knowledge base
+- [ ] Verify at least one person from each team can open and search JiraDump
 - [ ] Document where the HTML files are stored (SharePoint, network drive, etc.)
 - [ ] Set a reminder to check file accessibility after 6 months
 
